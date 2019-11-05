@@ -86,11 +86,17 @@ public class App {
                     stmtPatient.setInt(4, facilityid);
                     ResultSet rs1 = stmtPatient.executeQuery();
                     if (!rs1.next()) {
-                        System.out.println("Login Incorrect as it seems you are here for the first time. Please sign up\n");
+                        System.out.println("Login incorrect as it seems you are here for the first time. Please sign up.");
                         loginDisplay(conn);
                     } else {
+                        PreparedStatement getPatientID = conn.prepareStatement("select patient_id_seq.currval from dual");
+                        ResultSet rs3 = getPatientID.executeQuery();
+                        int seqPatient = 0;
+                        while (rs3.next()) {
+                            seqPatient = rs3.getInt("CURRVAL");
+                        }
                         System.out.println("Login Successful");
-                        Patient p = new Patient();
+                        Patient p = new Patient(seqPatient);
                         p.displayMenu(conn);
                     }
                 case 2:
@@ -161,7 +167,7 @@ public class App {
             checkAddress.setString(4, country);
             ResultSet rs4 = checkAddress.executeQuery();
             int seqAdd = -1;
-            
+
             if( rs4.next()){
             	//System.out.println("Found address in DB");
             	seqAdd = rs4.getInt("ID");
@@ -180,7 +186,7 @@ public class App {
                     seqAdd = rs3.getInt("CURRVAL");
                 }
             }
-            
+
             PreparedStatement insertPatient = conn.prepareStatement("insert into patient(FNAME, LNAME, DOB, PHONENUMBER, ADDRESS_ID, FACILITY_ID) values(?,?,?,?,?,?)");
             insertPatient.setString(1, fname);
             insertPatient.setString(2, lname);
@@ -191,7 +197,7 @@ public class App {
             insertPatient.executeQuery();
             conn.close();
             System.out.println("Sign Up Successful");
-            
+
         } else if (select == 2) {
             loginDisplay(conn);
         } else {
