@@ -12,7 +12,6 @@ import java.util.Scanner;
 
 import javax.swing.text.html.HTMLDocument.Iterator;
 
-import org.graalvm.compiler.nodes.NodeView.Default;
 
 public class EnterVitalTreatPatient{
 	
