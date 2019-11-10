@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 import java.util.Scanner;
 
 public class Staff{
-	public static void StaffMenuDisplay(Connection conn) throws Exception {
+	public void StaffMenuDisplay(Connection conn) throws Exception {
 		if(conn==null) {
 			System.out.println("Connection NULL");
 		}
@@ -32,13 +32,13 @@ public class Staff{
         }
     }
 	
-	public static ResultSet executeStringQuery(Connection conn, String query) throws Exception {
+	public ResultSet executeStringQuery(Connection conn, String query) throws Exception {
 		PreparedStatement stmt = conn.prepareStatement(query);
 		ResultSet rs = stmt.executeQuery();
 		return rs;
 	}
 	
-	public static void getCheckedInPatientList(Connection conn) throws Exception {
+	public void getCheckedInPatientList(Connection conn) throws Exception {
 		String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID"+
 								" AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL";
 		ResultSet rs = executeStringQuery(conn,getCheckedInP);
@@ -48,16 +48,18 @@ public class Staff{
 			System.out.println(rs.getInt(1));
 				
 		}
-		selectPatient(conn,copyrs);
+		selectPatient(conn);
 	}
 	
-	public static void selectPatient(Connection conn, ResultSet rs) throws Exception{
+	public void selectPatient(Connection conn) throws Exception{
 		System.out.println("Enter the patient id from the above list");
 		Scanner s = new Scanner(System.in);
 		int id = s.nextInt();
-		System.out.println("Looking for "+id);
+		System.out.println("Looking for Patient ID "+id);
 		int patient_found = 0;
 		System.out.println("List of Checked_IN patients is");
+		String find_session_id = "SELECT ID FROM PATIENT_SESSION WHERE PID = "+id;
+		ResultSet rs = executeStringQuery(conn, find_session_id);
 		while(rs.next()) {
 			System.out.println(rs.getInt(1));
 			if(rs.getInt(1) == id) {
@@ -73,7 +75,7 @@ public class Staff{
 		
 	}
 	
-	public static void getTreatedPatientList(Connection conn)throws Exception {
+	public void getTreatedPatientList(Connection conn)throws Exception {
 		String getTreatedPList = "SELECT id FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.ID = PATIENT_SESSION.PID"+
 									" AND PATIENT_SESSION.TREATED='Y'";
 		ResultSet rs = executeStringQuery(conn, getTreatedPList);
@@ -84,11 +86,11 @@ public class Staff{
 		treatedPatientMenu.displayTreatedPatientMenu(conn);
 	}
 	
-	public static void addSymptoms(Connection conn) throws Exception {
+	public void addSymptoms(Connection conn) throws Exception {
 		Symptom symptom = new Symptom();
 		symptom.addSymptomMenu(conn);
 	}
-	public static void addSeverityScale(Connection conn) throws Exception {
+	public void addSeverityScale(Connection conn) throws Exception {
 		String scale = "";
 		Scanner s =  new Scanner(System.in);
 		System.out.println("1. There is another level for this scale");
@@ -102,17 +104,18 @@ public class Staff{
 	    }
 	}
 	
-	public static String makeSeverityScale(String currentScale) {
+	public String makeSeverityScale(String currentScale) {
 		Scanner s = new Scanner(System.in);
 		currentScale += " " +s.nextLine();
 		return currentScale;
 	}
 	
-	public static void updateScaleInTable(Connection conn, String scale) throws Exception {
+	public void updateScaleInTable(Connection conn, String scale) throws Exception {
 		String query = "INSERT INTO SEVERITY_SCALE (SCALE) VALUES ("+ scale + ")" ;
 		ResultSet rs = executeStringQuery(conn, query);
 	}
-	public static void addAssessmentRule() {
+	public void addAssessmentRule() {
+		String rule = "";
 		
 	}
 }

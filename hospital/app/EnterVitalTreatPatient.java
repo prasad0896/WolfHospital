@@ -5,8 +5,14 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Scanner;
+
+import javax.swing.text.html.HTMLDocument.Iterator;
+
+import org.graalvm.compiler.nodes.NodeView.Default;
 
 public class EnterVitalTreatPatient{
 	
@@ -51,7 +57,7 @@ public class EnterVitalTreatPatient{
 			//System.out.println(addVitalSigns);
 			ResultSet rs1 = executeStringQuery(conn, addVitalSigns);
 			EnterVitalMenu(conn, id);
-			// TODO: record timestamp trigger assessment rule
+			triggerAssessmentRule(conn, id);
 		}
 		else {
 			System.out.println("Patient check-in phase completed! Cannot enter vitals again!");
@@ -59,6 +65,72 @@ public class EnterVitalTreatPatient{
 		}
 		
 	}
+	
+	public void triggerAssessmentRule(Connection conn,int pid) throws Exception {
+		String priority;
+		String getPatientSymptom = "SELECT SYM_CODE,SEVERITY FROM PATIENT_SYM_MAPPING WHERE SID = "+pid;
+		ResultSet rs = executeStringQuery(conn, getPatientSymptom);
+		// symptoms and severity as entered by patient
+		HashMap<String,String> symptom_severity = new HashMap<>();
+		while(rs.next()) {
+			symptom_severity.put(rs.getString(1), rs.getString(2));
+		}
+		String getAssessmentRule = "SELECT * FROM ASSESSMENT_RULE ";
+		ResultSet rs_rule = executeStringQuery(conn, getAssessmentRule);
+		//ArrayList<String> matchedRules = new ArrayList<String>();
+		while(rs_rule.next()) {
+			String rule = rs_rule.getString(2);
+			String [] rule_has_syms_and_scale = rule.split("&");
+			HashMap<String,String> rule_sym_scale = new HashMap<String, String>();
+			//store all symptoms present in the assessment rule in a arraylist
+			for(String sym: rule_has_syms_and_scale) {
+				String[] sym_scale = sym.split(" ");
+				rule_sym_scale.put(sym_scale[0], sym_scale[1]+" "+sym_scale[2]);
+			}
+			boolean skip_iteration = false;
+			if((symptom_severity.keySet()).containsAll(rule_sym_scale.keySet())) {
+				for(Map.Entry<String,String> entry: rule_sym_scale.entrySet()) {
+					String[] scale_in_rule = entry.getValue().split(" "); // >= 2  OR = high
+					String sym_in_rule = entry.getKey();
+					String scale_patient = symptom_severity.get(sym_in_rule);
+					switch(scale_in_rule[0]) {
+					case ">": if(Integer.parseInt(scale_patient) > Integer.parseInt(scale_in_rule[1])) {
+							continue;
+							} else{
+								skip_iteration = true;
+							}break;
+					case "<":  if(Integer.parseInt(scale_patient) < Integer.parseInt(scale_in_rule[1])) {
+						continue;
+						} else{
+							skip_iteration = true;
+						}break;
+					case ">=":  if(Integer.parseInt(scale_patient) >= Integer.parseInt(scale_in_rule[1])) {
+						continue;
+						} else{
+							skip_iteration = true;
+						}break;
+					case "<=" :  if(Integer.parseInt(scale_patient) <= Integer.parseInt(scale_in_rule[1])) {
+						continue;
+						} else{
+							skip_iteration = true;
+						}break;
+					case "=":  if(scale_patient.equals(scale_in_rule[1])) {
+						continue;
+						} else{
+							skip_iteration = true;
+						}break;
+					}
+					if(skip_iteration == true) {
+						break;
+					}
+				}
+				if(skip_iteration == false) {
+					priority = rs_rule.getString(3);
+				}
+		}
+			
+	}	
+}
 	
 	// TODO: get staff id from somewhere
 	public void TreatPatient(Connection conn, int pid) throws Exception {
@@ -77,9 +149,11 @@ public class EnterVitalTreatPatient{
 		HashSet<String> body_part_staff = new HashSet<String>();
 		while(rs2.next()) {
 			body_part_patient.add(rs2.getString(1));
+			System.out.println(rs2.getString(1));
 		}
 		while(rs3.next()) {
 			body_part_patient.add(rs3.getString(1));
+			System.out.println(rs3.getString(1));
 		}
 		while(rs1.next()) {
 			body_part_staff.add(rs1.getString(1));
