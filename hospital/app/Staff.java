@@ -7,13 +7,7 @@ import java.sql.ResultSet;
 import java.util.Scanner;
 
 public class Staff{
-	public static void main(String[] args) throws Exception {
-		StaffMenuDisplay();
-	}
-	
-	public static void StaffMenuDisplay() throws Exception {
-		Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+	public static void StaffMenuDisplay(Connection conn) throws Exception {
 		if(conn==null) {
 			System.out.println("Connection NULL");
 		}
@@ -103,7 +97,7 @@ public class Staff{
 	    switch(choice) {
 	    case 1: scale = makeSeverityScale(scale);break;
 	    case 2: updateScaleInTable(conn,scale);
-	    		StaffMenuDisplay();
+	    		StaffMenuDisplay(conn);
 	    		break;
 	    }
 	}

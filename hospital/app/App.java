@@ -13,10 +13,15 @@ import java.util.Scanner;
 
 public class App {
     public static void main(String[] args) throws Exception {
-        loginDisplay();
+    	Connection conn = DriverManager.getConnection(
+                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+		if(conn==null) {
+			System.out.println("Connection NULL");
+		}
+        loginDisplay(conn);
     }
 
-    private static void loginDisplay() throws Exception {
+    private static void loginDisplay(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------Hospital Management System--------------------------");
         System.out.println("1. Sign In");
@@ -26,36 +31,30 @@ public class App {
         int select = scan.nextInt();
         switch (select) {
             case 1:
-                signIn();
+                signIn(conn);
             case 2:
-                signUp();
+                signUp(conn);
             case 3:
             case 4:
+            	System.out.println("Connection closed");
+            	conn.close();
                 System.exit(0);
+                scan.close();
             default:
                 System.out.println("Enter a valid number");
-                loginDisplay();
+                loginDisplay(conn);
         }
     }
 
-    private static void signIn() throws Exception {
+    private static void signIn(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
 
         HashMap<Integer,String> facilities = new HashMap<Integer,String>();
         PreparedStatement stmt;
-        Connection conn = null;
-        try {
-            conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
-            assert conn != null;
-            stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
-            }
-        } finally {
-            assert conn != null;
-            conn.close();
+        stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
         }
 
         System.out.println("Facilities available (ID: NAME):");
@@ -78,9 +77,6 @@ public class App {
         System.out.println("2. Go Back");
         int select = scan.nextInt();
         if (select == 1) {
-
-            conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
             switch (isPatient) {
                 case 1:
                     PreparedStatement stmtPatient = conn.prepareStatement("select * from patient where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
@@ -91,11 +87,11 @@ public class App {
                     ResultSet rs1 = stmtPatient.executeQuery();
                     if (!rs1.next()) {
                         System.out.println("Login Incorrect as it seems you are here for the first time. Please sign up\n");
-                        loginDisplay();
+                        loginDisplay(conn);
                     } else {
                         System.out.println("Login Successful");
                         Patient p = new Patient();
-                        p.displayMenu();
+                        p.displayMenu(conn);
                     }
                 case 2:
                     PreparedStatement stmtStaff = conn.prepareStatement("select * from staff where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
@@ -106,22 +102,21 @@ public class App {
                     ResultSet rs2 = stmtStaff.executeQuery();
                     if (!rs2.next()) {
                         System.out.println("Login Incorrect\n");
-                        loginDisplay();
+                        loginDisplay(conn);
                     } else {
                         System.out.println("Login Successful");
                         // Remember to replace patient by staff
-                        Patient p = new Patient();
-                        p.displayMenu();
+                        Staff s = new Staff();
+                        s.StaffMenuDisplay(conn);
                     }
             }
-            conn.close();
         } else if (select == 2) {
-            loginDisplay();
+            loginDisplay(conn);
         }
         scan.close();
     }
 
-    private static void signUp() throws Exception {
+    private static void signUp(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("A. First Last Name");
         String[] name = scan.nextLine().split(" ");
@@ -141,19 +136,10 @@ public class App {
         System.out.println("E. Facility ID:");
         HashMap<Integer,String> facilities = new HashMap<Integer,String>();
         PreparedStatement stmt;
-        Connection conn1 = null;
-        try {
-            conn1 = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
-            assert conn1 != null;
-            stmt = conn1.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
-            }
-        } finally {
-            assert conn1 != null;
-            conn1.close();
+        stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
         }
         System.out.println("Facilities available (ID: NAME):");
         for (Entry<Integer, String> map : facilities.entrySet()) {
@@ -168,8 +154,6 @@ public class App {
 
         if (select == 1) {
         	//Todo: Check if entered address exists in the 
-            Connection conn = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
             PreparedStatement checkAddress = conn.prepareStatement("select id from address where street_name=? and city=? and state=? and country=?");
             checkAddress.setString(1, streetName);
             checkAddress.setString(2, city);
@@ -209,10 +193,10 @@ public class App {
             System.out.println("Sign Up Successful");
             
         } else if (select == 2) {
-            loginDisplay();
+            loginDisplay(conn);
         } else {
             System.out.println("Enter a valid number");
-            signUp();
+            signUp(conn);
         }
         scan.close();
     }

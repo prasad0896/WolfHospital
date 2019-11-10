@@ -4,8 +4,7 @@ import java.sql.Connection;
 import java.util.Scanner;
 
 public class Patient {
-    void displayMenu() {
-        Connection conn = DAL.getConn();
+    void displayMenu(Connection conn) {
         Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------Patient Check In--------------------------");
         System.out.println("1. Check In");
