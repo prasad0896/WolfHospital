@@ -70,7 +70,7 @@ public class App {
         String dob = scan.nextLine();
         System.out.println("Enter City of Address:");
         String city = scan.nextLine();
-        System.out.println("Are you a Patient?(1 or 0):");
+        System.out.println("Are you a Patient? (1 or 0):");
         int isPatient = scan.nextInt();
 
         System.out.println("1. Sign In");
@@ -99,8 +99,8 @@ public class App {
                         Patient p = new Patient(seqPatient);
                         p.displayMenu();
                     }
-                case 2:
-                    PreparedStatement stmtStaff = conn.prepareStatement("select * from staff where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
+                case 0:
+                    PreparedStatement stmtStaff = conn.prepareStatement("select employee_id from staff where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
                     stmtStaff.setString(1, city);
                     stmtStaff.setDate(2, new java.sql.Date(new SimpleDateFormat("dd-MMM-yy").parse(dob).getTime()));
                     stmtStaff.setString(3, lname);
@@ -110,9 +110,13 @@ public class App {
                         System.out.println("Login Incorrect\n");
                         loginDisplay(conn);
                     } else {
+                        String employeeID = "";
+                        while(rs.next()){
+                            employeeID = rs.getString("EMPLOYEE_ID");
+                        }
                         System.out.println("Login Successful");
                         // Remember to replace patient by staff
-                        Staff s = new Staff();
+                        Staff s = new Staff(employeeID);
                         s.StaffMenuDisplay(conn);
                     }
             }
