@@ -7,7 +7,6 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map.Entry;
 import java.util.Scanner;
@@ -65,13 +64,14 @@ public class App {
         }
         System.out.println("Please choose a facility id:");
         int facilityid = scan.nextInt();
+        scan.nextLine();
         System.out.println("Enter Last Name:");
         String lname = scan.nextLine();
-        System.out.println("Enter DOB (DD-MM-YY):");
+        System.out.println("Enter DOB (DD-mmm-YY):");
         String dob = scan.nextLine();
         System.out.println("Enter City of Address:");
         String city = scan.nextLine();
-        System.out.println("Are you a Patient?:");
+        System.out.println("Are you a Patient?(1 or 0):");
         int isPatient = scan.nextInt();
 
         System.out.println("1. Sign In");
@@ -90,7 +90,7 @@ public class App {
                     stmtPatient.setInt(4, facilityid);
                     ResultSet rs1 = stmtPatient.executeQuery();
                     if (!rs1.next()) {
-                        System.out.println("Login Incorrect\n");
+                        System.out.println("Login Incorrect as it seems you are here for the first time. Please sign up\n");
                         loginDisplay();
                     } else {
                         System.out.println("Login Successful");
@@ -109,6 +109,7 @@ public class App {
                         loginDisplay();
                     } else {
                         System.out.println("Login Successful");
+                        // Remember to replace patient by staff
                         Patient p = new Patient();
                         p.displayMenu();
                     }
@@ -124,19 +125,19 @@ public class App {
         Scanner scan = new Scanner(System.in);
         System.out.println("A. First Last Name");
         String[] name = scan.nextLine().split(" ");
-        String fname = name[0].strip();
-        String lname = name[1].strip();
-        System.out.println("B. Date of Birth");
-        String dob = scan.nextLine();
+        String fname = name[0].trim();
+        String lname = name[1].trim();
+        System.out.println("B. Date of Birth (DD-mmm-YY)");
+        String dob = scan.nextLine().trim();
         System.out.println("C. Address");
         String address = scan.nextLine();
         String[] addressFields = address.split(",");
-        String streetName = addressFields[0].strip();
-        String city = addressFields[1].strip();
-        String state = addressFields[2].strip();
-        String country = addressFields[3].strip();
+        String streetName = addressFields[0].trim();
+        String city = addressFields[1].trim();
+        String state = addressFields[2].trim();
+        String country = addressFields[3].trim();
         System.out.println("D. Phone Number:");
-        String contact = scan.nextLine();
+        String contact = scan.nextLine().trim();
         System.out.println("E. Facility ID:");
         HashMap<Integer,String> facilities = new HashMap<Integer,String>();
         PreparedStatement stmt;
@@ -154,13 +155,13 @@ public class App {
             assert conn1 != null;
             conn1.close();
         }
-
         System.out.println("Facilities available (ID: NAME):");
         for (Entry<Integer, String> map : facilities.entrySet()) {
             System.out.println(map.getKey()+": "+map.getValue());
         }
-        System.out.println("Please insert your facility id");
+        System.out.println("Please insert your facility id now");
         int facilityID = scan.nextInt();
+        scan.nextLine();
         System.out.println("1. Sign Up");
         System.out.println("2. Go Back");
         int select = scan.nextInt();
@@ -169,18 +170,33 @@ public class App {
         	//Todo: Check if entered address exists in the 
             Connection conn = DriverManager.getConnection(
                     "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
-            PreparedStatement insertAddress = conn.prepareStatement("insert into address(street_name, city, state, country) values(?,?,?,?)");
-            insertAddress.setString(1, streetName);
-            insertAddress.setString(2, city);
-            insertAddress.setString(3, state);
-            insertAddress.setString(4, country);
-            insertAddress.executeQuery();
-            PreparedStatement getAddSeqID = conn.prepareStatement("select address_id_seq.currval from dual");
-            ResultSet rs3 = getAddSeqID.executeQuery();
-            int seqAdd = 0;
-            while (rs3.next()) {
-                seqAdd = rs3.getInt("CURRVAL");
+            PreparedStatement checkAddress = conn.prepareStatement("select id from address where street_name=? and city=? and state=? and country=?");
+            checkAddress.setString(1, streetName);
+            checkAddress.setString(2, city);
+            checkAddress.setString(3, state);
+            checkAddress.setString(4, country);
+            ResultSet rs4 = checkAddress.executeQuery();
+            int seqAdd = -1;
+            
+            if( rs4.next()){
+            	//System.out.println("Found address in DB");
+            	seqAdd = rs4.getInt("ID");
             }
+            else{
+            	//System.out.println("Did not Find address in DB");
+            	PreparedStatement insertAddress = conn.prepareStatement("insert into address(street_name, city, state, country) values(?,?,?,?)");
+                insertAddress.setString(1, streetName);
+                insertAddress.setString(2, city);
+                insertAddress.setString(3, state);
+                insertAddress.setString(4, country);
+                insertAddress.executeQuery();
+                PreparedStatement getAddSeqID = conn.prepareStatement("select address_id_seq.currval from dual");
+                ResultSet rs3 = getAddSeqID.executeQuery();
+                while (rs3.next()) {
+                    seqAdd = rs3.getInt("CURRVAL");
+                }
+            }
+            
             PreparedStatement insertPatient = conn.prepareStatement("insert into patient(FNAME, LNAME, DOB, PHONENUMBER, ADDRESS_ID, FACILITY_ID) values(?,?,?,?,?,?)");
             insertPatient.setString(1, fname);
             insertPatient.setString(2, lname);
@@ -190,6 +206,8 @@ public class App {
             insertPatient.setInt(6, facilityID);
             insertPatient.executeQuery();
             conn.close();
+            System.out.println("Sign Up Successful");
+            
         } else if (select == 2) {
             loginDisplay();
         } else {
