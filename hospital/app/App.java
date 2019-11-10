@@ -46,10 +46,10 @@ public class App {
         }
     }
 
-    private static void signIn(Connection conn) throws Exception {
+    static void signIn(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
 
-        HashMap<Integer,String> facilities = new HashMap<Integer,String>();
+        HashMap<Integer,String> facilities = new HashMap();
         PreparedStatement stmt;
         stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
         ResultSet rs = stmt.executeQuery();
@@ -97,7 +97,7 @@ public class App {
                         }
                         System.out.println("Login Successful");
                         Patient p = new Patient(seqPatient);
-                        p.displayMenu(conn);
+                        p.displayMenu();
                     }
                 case 2:
                     PreparedStatement stmtStaff = conn.prepareStatement("select * from staff where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
