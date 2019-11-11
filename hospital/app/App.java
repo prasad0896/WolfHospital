@@ -49,7 +49,7 @@ public class App {
     static void signIn(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
 
-        HashMap<Integer,String> facilities = new HashMap();
+        HashMap<Integer,String> facilities = new HashMap<Integer,String>();
         PreparedStatement stmt;
         stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
         ResultSet rs = stmt.executeQuery();
@@ -79,7 +79,7 @@ public class App {
         if (select == 1) {
             switch (isPatient) {
                 case 1:
-                    PreparedStatement stmtPatient = conn.prepareStatement("select * from patient where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
+                    PreparedStatement stmtPatient = conn.prepareStatement("select * from patient where address_id in (SELECT id from address where city = ?) and dob = ? and l_name = ? and facility_id = ?");
                     stmtPatient.setString(1, city);
                     stmtPatient.setDate(2, new java.sql.Date(new SimpleDateFormat("dd-MMM-yy").parse(dob).getTime()));
                     stmtPatient.setString(3, lname);
@@ -97,7 +97,7 @@ public class App {
                         }
                         System.out.println("Login Successful");
                         Patient p = new Patient(seqPatient);
-                        p.displayMenu();
+                        p.displayMenu(conn);
                     }
                 case 0:
                     PreparedStatement stmtStaff = conn.prepareStatement("select employee_id from staff where address_id in (SELECT id from address where city = ?) and dob = ? and lname = ? and facility_id = ?");
@@ -111,13 +111,11 @@ public class App {
                         loginDisplay(conn);
                     } else {
                         String employeeID = "";
-                        while(rs.next()){
-                            employeeID = rs.getString("EMPLOYEE_ID");
-                        }
+                        employeeID = rs2.getString("EMPLOYEE_ID");
                         System.out.println("Login Successful");
                         // Remember to replace patient by staff
                         Staff s = new Staff(employeeID);
-                        s.StaffMenuDisplay(conn);
+                        Staff.StaffMenuDisplay(conn);
                     }
             }
         } else if (select == 2) {
@@ -191,7 +189,7 @@ public class App {
                 }
             }
 
-            PreparedStatement insertPatient = conn.prepareStatement("insert into patient(FNAME, LNAME, DOB, PHONENUMBER, ADDRESS_ID, FACILITY_ID) values(?,?,?,?,?,?)");
+            PreparedStatement insertPatient = conn.prepareStatement("insert into patient(F_NAME, L_NAME, DOB, PHONE_NUMBER, ADDRESS_ID, FACILITY_ID) values(?,?,?,?,?,?)");
             insertPatient.setString(1, fname);
             insertPatient.setString(2, lname);
             insertPatient.setString(3, dob);
@@ -199,15 +197,13 @@ public class App {
             insertPatient.setInt(5, seqAdd);
             insertPatient.setInt(6, facilityID);
             insertPatient.executeQuery();
-            conn.close();
-            System.out.println("Sign Up Successful");
-
+            System.out.println("Sign Up Successful. Please Sign in Again");
+            loginDisplay(conn);
         } else if (select == 2) {
             loginDisplay(conn);
         } else {
             System.out.println("Enter a valid number");
             signUp(conn);
         }
-        scan.close();
     }
 }

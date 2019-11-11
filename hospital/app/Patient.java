@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Map.Entry;
 
 class Patient {
 
@@ -17,9 +18,7 @@ class Patient {
         this.id = id;
     }
 
-    void displayMenu() throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    void displayMenu(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------Patient Check In--------------------------");
         System.out.println("1. Check In");
@@ -27,7 +26,7 @@ class Patient {
         System.out.println("3. Go back");
         int select = scan.nextInt();
         if (select == 1) {
-            displayCheckIn();
+            displayCheckIn(conn);
         } else if (select == 2) {
 //            displayCheckOutForm(conn);
         } else {
@@ -37,18 +36,32 @@ class Patient {
         //System.exit(0);
     }
 
-    private void displayCheckIn() throws Exception {
-        Scanner scan = new Scanner(System.in);
-        HashMap<Integer, String> facilities = new HashMap<>();
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
-        assert conn != null;
-        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT WHERE PID = ? AND CHECKIN_END IS NOT NULL");
+    private void displayCheckIn(Connection conn) throws Exception {
+    	Scanner scan = new Scanner(System.in);
+    	HashMap<Integer,String> facilities = new HashMap<Integer,String>();
+        PreparedStatement stmt;
+        stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
+        ResultSet rs = stmt.executeQuery();
+        while (rs.next()) {
+            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
+        }
+
+        System.out.println("Facilities available (ID: NAME):");
+        for (Entry<Integer, String> map : facilities.entrySet()) {
+            System.out.println(map.getKey()+": "+map.getValue());
+        }
+        System.out.println("Please choose a facility id:");
+        int facilityid = scan.nextInt();
+        scan.nextLine();
+        
+        HashMap<Integer, String> symptoms = new HashMap<>();
+        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND FACILITY_ID = ? AND CHECKIN_END IS NOT NULL");
         isCheckedIn.setInt(1, this.id);
+        isCheckedIn.setInt(2, facilityid);
         ResultSet rs1 = isCheckedIn.executeQuery();
         if (rs1.next()) {
             System.out.println("ERROR: Patient already Checked-In. You can only Check-Out.");
-            displayMenu();
+            displayMenu(conn);
         }
 
         PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid) values (?,?)");
@@ -64,13 +77,13 @@ class Patient {
         this.sid = patientSeqID;
 
         System.out.println("Please choose a symptom");
-        PreparedStatement stmt = conn.prepareStatement("SELECT CODE, NAME FROM SYMPTOM");
-        ResultSet rs = stmt.executeQuery();
-        while (rs.next()) {
-            facilities.put(rs.getInt("CODE"), rs.getString("NAME"));
+        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM SYMPTOM");
+        ResultSet rs2 = stmt2.executeQuery();
+        while (rs2.next()) {
+            symptoms.put(rs2.getInt("CODE"), rs2.getString("NAME"));
         }
         int i = 0;
-        for (Map.Entry<Integer, String> map : facilities.entrySet()) {
+        for (Map.Entry<Integer, String> map : symptoms.entrySet()) {
             System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
             i++;
         }
@@ -181,7 +194,7 @@ class Patient {
         ResultSet rsValPat = validateSym.executeQuery();
         if (!rsValPat.next()) {
             System.out.println("Please enter your symptoms:");
-            displayCheckIn();
+            displayCheckIn(conn);
         }
     }
 
