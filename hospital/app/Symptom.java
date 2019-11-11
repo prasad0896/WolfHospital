@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.Scanner;
 
 public class Symptom {
-	public void addSymptomMenu(Connection conn) throws Exception {
+	public void addSymptomMenu(Connection conn,String staff_id) throws Exception {
 		Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------ADD SYMPTOM MENU --------------------------");
         System.out.println("1. Record");
@@ -16,20 +16,20 @@ public class Symptom {
         
         int select = scan.nextInt();
         switch(select) {
-        case 1: Record(conn); break;
-        case 2: conn.close(); break;
+        case 1: Record(conn,staff_id); break;
+        case 2: Staff s = new Staff(staff_id); s.StaffMenuDisplay(conn); break;
        }
 	}
 	
 	public ResultSet executeStringQuery(Connection conn, String query) throws Exception {
-		System.out.println("executing");
+		//System.out.println("executing");
 		PreparedStatement stmt = conn.prepareStatement(query);
 		ResultSet rs = stmt.executeQuery();
 		//System.out.println(rs.next());
 		return rs;
 	}
         
-    public void Record(Connection conn) throws Exception {
+    public void Record(Connection conn,String id) throws Exception {
     	Scanner s = new Scanner(System.in);
     	System.out.println("Enter Symptom name");
     	String sym_name = s.nextLine();
@@ -44,18 +44,23 @@ public class Symptom {
     	ResultSet r = executeStringQuery(conn, query);
     	r.next();
     	int num_of_rows = r.getInt(1)+1;
-    	String sym_code = "SYM_"+num_of_rows;
-    	String query1 = "INSERT INTO SYMPTOM (CODE, NAME, BP_CODE) VALUES (" +sym_code + ", "+sym_name + ", "+ body_part;
+    	String sym_code = "SYM00"+num_of_rows;
+    	String query1;
+    	if(body_part == "") {
+    		query1 = "INSERT INTO SYMPTOM (CODE, NAME) VALUES ('" +sym_code + "', '"+sym_name + "')";
+    	}else {
+    		query1 = "INSERT INTO SYMPTOM (CODE, NAME, BP_CODE) VALUES ('" +sym_code + "', '"+sym_name + "', "+ body_part+"')";
+    	}
     	ResultSet rs1 = executeStringQuery(conn, query1);
     	
-    	int scale_found = enterSeverity(conn,sym_code);
+    	int scale_found = enterSeverity(conn,sym_code,id);
     	while(scale_found==0) {
     		System.out.println("Enter valid severity scale");
-    		scale_found = enterSeverity(conn,sym_code);
+    		scale_found = enterSeverity(conn,sym_code,id);
     	}
     }
     
-    public int enterSeverity(Connection conn,String sym_code) throws Exception {
+    public int enterSeverity(Connection conn,String sym_code,String id) throws Exception {
     	Scanner s = new Scanner(System.in);
     	System.out.println("Enter Severity");
     	String getSeverityScales = "SELECT * FROM SEVERITY_SCALE";
@@ -71,19 +76,18 @@ public class Symptom {
 			if(copyrs.getInt(1) == scale_id) {
 				System.out.println("ID matched");
 				scale_found = 1;
-				addEntryInSymptomSeverityTable(conn,copyrs.getString(2),sym_code);
+				addEntryInSymptomSeverityTable(conn,scale_id,sym_code,id);
 				break;
 			}
 		}
     	return scale_found;
     }
     
-    public void addEntryInSymptomSeverityTable(Connection conn,String scale,String sym_code) throws Exception {
-    	String[] split_scale = scale.split(" ");
-    	for(int i=0;i<split_scale.length;i++) {
-    		String query = "INSERT INTO SYM_SEVERITY (CODE,SEVERITY) VALUES ( " +sym_code +", "+
-    						split_scale[i]+")";
-    		ResultSet r = executeStringQuery(conn, query);
-    	}
+    public void addEntryInSymptomSeverityTable(Connection conn,int scale_id,String sym_code,String id) throws Exception {
+    	String query = "INSERT INTO SYM_SEVERITY (CODE,SEVERITY) VALUES ('" +sym_code +"', "+
+						scale_id+")";
+		ResultSet r = executeStringQuery(conn, query);
+		System.out.println("New Symptom Added!");
+		addSymptomMenu(conn,id);
     }
 }

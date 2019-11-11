@@ -21,7 +21,7 @@ public class App {
         loginDisplay(conn);
     }
 
-    private static void loginDisplay(Connection conn) throws Exception {
+    public static void loginDisplay(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------Hospital Management System--------------------------");
         System.out.println("1. Sign In");
@@ -46,7 +46,7 @@ public class App {
         }
     }
 
-    static void signIn(Connection conn) throws Exception {
+    public static void signIn(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
 
         HashMap<Integer,String> facilities = new HashMap<Integer,String>();
@@ -112,6 +112,7 @@ public class App {
                     } else {
                         String employeeID = "";
                         employeeID = rs2.getString("EMPLOYEE_ID");
+                        
                         System.out.println("Login Successful");
                         // Remember to replace patient by staff
                         Staff s = new Staff(employeeID);
@@ -124,7 +125,7 @@ public class App {
         scan.close();
     }
 
-    private static void signUp(Connection conn) throws Exception {
+    public static void signUp(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("A. First Last Name");
         String[] name = scan.nextLine().split(" ");
