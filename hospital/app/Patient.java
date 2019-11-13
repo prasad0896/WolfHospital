@@ -4,9 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 import java.util.Map.Entry;
 
 class Patient {
@@ -28,7 +26,7 @@ class Patient {
         if (select == 1) {
             displayCheckIn(conn);
         } else if (select == 2) {
-//            displayCheckOutForm(conn);
+            displayCheckOutForm();
         } else {
             App.signIn(conn);
         }
@@ -37,35 +35,38 @@ class Patient {
     }
 
     private void displayCheckIn(Connection conn) throws Exception {
-    	Scanner scan = new Scanner(System.in);
-    	HashMap<Integer,String> facilities = new HashMap<Integer,String>();
+        Scanner scan = new Scanner(System.in);
+        HashMap<Integer, String> facilities = new HashMap<Integer, String>();
         PreparedStatement stmt;
         stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
         ResultSet rs = stmt.executeQuery();
         while (rs.next()) {
-            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
+            facilities.put(rs.getInt("FACILITY_ID"), rs.getString("NAME"));
         }
 
         System.out.println("Facilities available (ID: NAME):");
         for (Entry<Integer, String> map : facilities.entrySet()) {
-            System.out.println(map.getKey()+": "+map.getValue());
+            System.out.println(map.getKey() + ": " + map.getValue());
         }
         System.out.println("Please choose a facility id:");
         int facilityid = scan.nextInt();
         scan.nextLine();
-        
-        HashMap<Integer, String> symptoms = new HashMap<>();
-        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND FACILITY_ID = ? AND CHECKIN_END IS NOT NULL");
+
+        //todo: move facility id from patient to session
+        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_END IS NOT NULL");
         isCheckedIn.setInt(1, this.id);
-        isCheckedIn.setInt(2, facilityid);
+//        isCheckedIn.setInt(2, facilityid);
         ResultSet rs1 = isCheckedIn.executeQuery();
         if (rs1.next()) {
-            System.out.println("ERROR: Patient already Checked-In. You can only Check-Out.");
+            System.out.println();
+            System.out.println("ERROR: Patient is already Checked-In. You can only Check-Out.");
+            System.out.println();
             displayMenu(conn);
         }
 
         PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid) values (?,?)");
         createPatientSession.setTimestamp(1, new java.sql.Timestamp(new java.util.Date().getTime()));
+        createPatientSession.setInt(2, this.id);
         createPatientSession.executeQuery();
 
         PreparedStatement getAddSeqID = conn.prepareStatement("select patient_session_id_seq.currval from dual");
@@ -76,89 +77,81 @@ class Patient {
         }
         this.sid = patientSeqID;
 
-        System.out.println("Please choose a symptom");
-        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM SYMPTOM");
+        System.out.println("Please choose a symptom (Enter the CODE/Other/Done):");
+        HashMap<String, List> symptoms = new HashMap<>();
+        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME, BP_CODE FROM SYMPTOM");
         ResultSet rs2 = stmt2.executeQuery();
         while (rs2.next()) {
-            symptoms.put(rs2.getInt("CODE"), rs2.getString("NAME"));
+            symptoms.put(rs2.getString("CODE"), Arrays.asList(rs2.getString("NAME"), rs2.getString("BP_CODE")));
         }
         int i = 0;
-        for (Map.Entry<Integer, String> map : symptoms.entrySet()) {
+        for (Map.Entry<String, List> map : symptoms.entrySet()) {
             System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
             i++;
         }
-        System.out.println(i + ". Other");
-        System.out.println(i + ". Done");
-        String select = scan.nextLine();
-        if (select.equals("Other")) {
+        System.out.println(i + ". OTHER");
+        System.out.println(i + 1 + ". DONE");
+        String select = scan.nextLine().trim().toUpperCase();
+        if (select.equals("OTHER")) {
             System.out.println("Enter symptom name:");
             String symtom_name = scan.nextLine();
             String symtom_code = symtom_name.substring(0, 3).toUpperCase();
             displayMetaData(symtom_name, symtom_code);
-        } else if (select.equals("Done")) {
+        } else if (select.equals("DONE")) {
             validatePatient();
         } else {
-            displayMetaData(select);
+            displayMetaData(select, symptoms.get(select).get(0).toString());
         }
     }
 
-    private void displayMetaData(String symtom_name) {
-        System.out.println("1. Body part");
-        System.out.println("2. Duration");
-        System.out.println("3. Reoccurring");
-        System.out.println("4. Severity");
-        System.out.println("5. Cause (Incident)");
-    }
-
-    private void displayMetaData(String symtom_name, String symtom_code) throws Exception {
+    private void displayMetaData(String symtom_code, String symtom_name) throws Exception {
         Connection conn = DriverManager.getConnection(
                 "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
         Scanner scan = new Scanner(System.in);
-        System.out.println("1. Body part");
-        System.out.println("2. Duration");
-        System.out.println("3. Reoccurring");
-        System.out.println("4. Severity");
-        System.out.println("5. Cause (Incident)");
-        int select = scan.nextInt();
-        scan.nextLine();
-        String bodypart_name = "";
         String bodypart_code = "";
         Integer isRecurring = null;
         Integer duration = null;
         int severityScaleID = 0;
+        String severity = "";
         String cause = "";
-        while (bodypart_name.isEmpty() || isRecurring == null || duration == null || cause.isEmpty()) {
+        while (bodypart_code.isEmpty() || isRecurring == null || duration == null || cause.isEmpty() || severity.isEmpty()) {
+            System.out.println("Please complete all of the below details:");
+            System.out.println("1. Body part");
+            System.out.println("2. Duration");
+            System.out.println("3. Reoccurring");
+            System.out.println("4. Severity");
+            System.out.println("5. Cause (Incident)");
+            int select = scan.nextInt();
+            scan.nextLine();
             switch (select) {
                 case 1: {
-                    System.out.println("Enter body part:");
-                    bodypart_name = scan.nextLine();
-                    PreparedStatement stmtSym = conn.prepareStatement("select * from symptom where name = ? and bp_code = (select code from bodypart where name = ?)");
-                    stmtSym.setString(1, bodypart_name);
-                    stmtSym.setString(2, symtom_name);
+                    bodypart_code = displayBodyparts(scan);
+                    PreparedStatement stmtSym = conn.prepareStatement("select * from symptom where code = ? and bp_code = ?");
+                    stmtSym.setString(1, bodypart_code);
+                    stmtSym.setString(2, symtom_code);
                     ResultSet rs = stmtSym.executeQuery();
                     if (!rs.next()) {
-                        bodypart_code = bodypart_name.substring(0, 3).concat("000").toUpperCase();
                         PreparedStatement insertSym = conn.prepareStatement("insert into symptom (code, name, bp_code) values (?,?,?)");
                         insertSym.setString(1, symtom_code);
                         insertSym.setString(2, symtom_name);
                         insertSym.setString(3, bodypart_code);
-                        stmtSym.executeQuery();
-                        PreparedStatement insertBodypart = conn.prepareStatement("insert into bodypart (code, name) values (?,?)");
-                        insertBodypart.setString(1, bodypart_name);
-                        insertBodypart.setString(2, bodypart_code);
-                        stmtSym.executeQuery();
+                        insertSym.executeQuery();
                     }
+                    break;
                 }
                 case 2: {
                     System.out.println("Enter duration:");
                     duration = scan.nextInt();
+                    break;
                 }
                 case 3: {
                     System.out.println("Is the symptom reoccurring? Enter 0/1:");
                     isRecurring = scan.nextInt();
+                    break;
                 }
                 case 4: {
-                    displaySeverityScales();
+                    HashMap severityScales = displaySeverityScales();
+                    System.out.println("Enter how you want enter the severity:");
                     System.out.println("1. Add new severity scale");
                     System.out.println("2. Choose existing scale");
                     int severitySelect = scan.nextInt();
@@ -168,22 +161,51 @@ class Patient {
                         case 2:
                             System.out.println("Enter the scale_id (number) from above:");
                             severityScaleID = scan.nextInt();
+                            scan.nextLine();
+                            System.out.println("Enter the severity of your pain:" + severityScales.get(severityScaleID));
+                            severity = scan.nextLine();
                     }
+                    break;
                 }
                 case 5: {
                     System.out.println("Enter cause:");
                     cause = scan.nextLine();
+                    break;
                 }
             }
         }
-        PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, sym_code, severity, duration, reoccurring, cause, bp_code) values (?,?,?,?,?,?,?)");
+        PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, sym_code, severity, duration, reoccuring, cause, bp_code) values (?,?,?,?,?,?,?)");
         insertPatientSym.setInt(1, this.sid);
         insertPatientSym.setString(2, symtom_code);
-        insertPatientSym.setInt(3, severityScaleID);
+        insertPatientSym.setString(3, severity);
         insertPatientSym.setInt(4, duration);
         insertPatientSym.setInt(5, isRecurring);
         insertPatientSym.setString(6, cause);
         insertPatientSym.setString(7, bodypart_code);
+        insertPatientSym.executeQuery();
+        scan.close();
+        System.out.println("Check-in process completed.");
+        displayMenu(conn);
+    }
+
+    private String displayBodyparts(Scanner scan) throws Exception {
+        Connection conn = DriverManager.getConnection(
+                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+        System.out.println("Enter body part code:");
+        HashMap<String, String> bodyparts = new HashMap<>();
+        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM BODYPART");
+        ResultSet rs2 = stmt2.executeQuery();
+        while (rs2.next()) {
+            bodyparts.put(rs2.getString("CODE"), rs2.getString("NAME"));
+        }
+        int i = 0;
+        for (Map.Entry<String, String> map : bodyparts.entrySet()) {
+            System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
+            i++;
+        }
+        String bodypart_code = scan.nextLine();
+        conn.close();
+        return bodypart_code;
     }
 
     private void validatePatient() throws Exception {
@@ -196,6 +218,7 @@ class Patient {
             System.out.println("Please enter your symptoms:");
             displayCheckIn(conn);
         }
+        conn.close();
     }
 
     private static int addSeverityScale() throws Exception {
@@ -233,7 +256,7 @@ class Patient {
         ResultSet rs = query.executeQuery();
     }
 
-    private static void displaySeverityScales() throws Exception {
+    private static HashMap displaySeverityScales() throws Exception {
         Connection conn = DriverManager.getConnection(
                 "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
         System.out.println("Following are the severity scales:");
@@ -247,5 +270,11 @@ class Patient {
         for (Map.Entry<Integer, String> map : severityScales.entrySet()) {
             System.out.println(map.getKey() + ": " + map.getValue());
         }
+        conn.close();
+        return severityScales;
+    }
+
+    private static void displayCheckOutForm() {
+
     }
 }
