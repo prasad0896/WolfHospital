@@ -26,7 +26,7 @@ class Patient {
         if (select == 1) {
             displayCheckIn(conn);
         } else if (select == 2) {
-            displayCheckOutForm();
+            displayCheckOutForm(conn);
         } else {
             App.signIn(conn);
         }
@@ -274,7 +274,23 @@ class Patient {
         return severityScales;
     }
 
-    private static void displayCheckOutForm() {
-
+    private void displayCheckOutForm(Connection conn) throws Exception {
+        //todo display report
+        System.out.println("Display the report that is filled by the staff:");
+        System.out.println("1. Yes");
+        System.out.println("2. No");
+        System.out.println("3. Go Back");
+        Scanner scan = new Scanner(System.in);
+        int select = scan.nextInt();
+        if (select == 1) {
+            displayMenu(conn);
+        } else if (select == 2) {
+            System.out.println("Please enter a valid reason:");
+            String reason = scan.nextLine();
+            //todo store reason?
+        } else {
+            displayMenu(conn);
+        }
+        scan.close();
     }
 }
