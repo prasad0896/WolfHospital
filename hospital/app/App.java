@@ -13,11 +13,11 @@ import java.util.Scanner;
 
 public class App {
     public static void main(String[] args) throws Exception {
-    	Connection conn = DriverManager.getConnection(
+        Connection conn = DriverManager.getConnection(
                 "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
-		if(conn==null) {
-			System.out.println("Connection NULL");
-		}
+        if (conn == null) {
+            System.out.println("Connection NULL");
+        }
         loginDisplay(conn);
     }
 
@@ -36,8 +36,8 @@ public class App {
                 signUp(conn);
             case 3:
             case 4:
-            	System.out.println("Connection closed");
-            	conn.close();
+                System.out.println("Connection closed");
+                conn.close();
                 System.exit(0);
                 scan.close();
             default:
@@ -49,17 +49,17 @@ public class App {
     public static void signIn(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
 
-        HashMap<Integer,String> facilities = new HashMap<Integer,String>();
+        HashMap<Integer, String> facilities = new HashMap<Integer, String>();
         PreparedStatement stmt;
         stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
         ResultSet rs = stmt.executeQuery();
         while (rs.next()) {
-            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
+            facilities.put(rs.getInt("FACILITY_ID"), rs.getString("NAME"));
         }
 
         System.out.println("Facilities available (ID: NAME):");
         for (Entry<Integer, String> map : facilities.entrySet()) {
-            System.out.println(map.getKey()+": "+map.getValue());
+            System.out.println(map.getKey() + ": " + map.getValue());
         }
         System.out.println("Please choose a facility id:");
         int facilityid = scan.nextInt();
@@ -79,7 +79,7 @@ public class App {
         if (select == 1) {
             switch (isPatient) {
                 case 1:
-                    PreparedStatement stmtPatient = conn.prepareStatement("select * from patient where address_id in (SELECT id from address where city = ?) and dob = ? and l_name = ? and facility_id = ?");
+                    PreparedStatement stmtPatient = conn.prepareStatement("select PID from patient where address_id in (SELECT id from address where city = ?) and dob = ? and l_name = ? and facility_id = ?");
                     stmtPatient.setString(1, city);
                     stmtPatient.setDate(2, new java.sql.Date(new SimpleDateFormat("dd-MMM-yy").parse(dob).getTime()));
                     stmtPatient.setString(3, lname);
@@ -89,14 +89,9 @@ public class App {
                         System.out.println("Login incorrect as it seems you are here for the first time. Please sign up.");
                         loginDisplay(conn);
                     } else {
-                        PreparedStatement getPatientID = conn.prepareStatement("select patient_id_seq.currval from dual");
-                        ResultSet rs3 = getPatientID.executeQuery();
-                        int seqPatient = 0;
-                        while (rs3.next()) {
-                            seqPatient = rs3.getInt("CURRVAL");
-                        }
+                        int patientID = rs1.getInt("PID");
                         System.out.println("Login Successful");
-                        Patient p = new Patient(seqPatient);
+                        Patient p = new Patient(patientID);
                         p.displayMenu(conn);
                     }
                 case 0:
@@ -112,11 +107,11 @@ public class App {
                     } else {
                         String employeeID = "";
                         employeeID = rs2.getString("EMPLOYEE_ID");
-                        
+
                         System.out.println("Login Successful");
                         // Remember to replace patient by staff
                         Staff s = new Staff(employeeID);
-                        Staff.StaffMenuDisplay(conn);
+                        s.StaffMenuDisplay(conn);
                     }
             }
         } else if (select == 2) {
@@ -143,16 +138,16 @@ public class App {
         System.out.println("D. Phone Number:");
         String contact = scan.nextLine().trim();
         System.out.println("E. Facility ID:");
-        HashMap<Integer,String> facilities = new HashMap<Integer,String>();
+        HashMap<Integer, String> facilities = new HashMap<Integer, String>();
         PreparedStatement stmt;
         stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
         ResultSet rs = stmt.executeQuery();
         while (rs.next()) {
-            facilities.put(rs.getInt("FACILITY_ID"),rs.getString("NAME"));
+            facilities.put(rs.getInt("FACILITY_ID"), rs.getString("NAME"));
         }
         System.out.println("Facilities available (ID: NAME):");
         for (Entry<Integer, String> map : facilities.entrySet()) {
-            System.out.println(map.getKey()+": "+map.getValue());
+            System.out.println(map.getKey() + ": " + map.getValue());
         }
         System.out.println("Please insert your facility id now");
         int facilityID = scan.nextInt();
@@ -162,7 +157,7 @@ public class App {
         int select = scan.nextInt();
 
         if (select == 1) {
-        	//Todo: Check if entered address exists in the 
+            //Todo: Check if entered address exists
             PreparedStatement checkAddress = conn.prepareStatement("select id from address where street_name=? and city=? and state=? and country=?");
             checkAddress.setString(1, streetName);
             checkAddress.setString(2, city);
@@ -171,13 +166,12 @@ public class App {
             ResultSet rs4 = checkAddress.executeQuery();
             int seqAdd = -1;
 
-            if( rs4.next()){
-            	//System.out.println("Found address in DB");
-            	seqAdd = rs4.getInt("ID");
-            }
-            else{
-            	//System.out.println("Did not Find address in DB");
-            	PreparedStatement insertAddress = conn.prepareStatement("insert into address(street_name, city, state, country) values(?,?,?,?)");
+            if (rs4.next()) {
+                //System.out.println("Found address in DB");
+                seqAdd = rs4.getInt("ID");
+            } else {
+                //System.out.println("Did not Find address in DB");
+                PreparedStatement insertAddress = conn.prepareStatement("insert into address(street_name, city, state, country) values(?,?,?,?)");
                 insertAddress.setString(1, streetName);
                 insertAddress.setString(2, city);
                 insertAddress.setString(3, state);
@@ -198,7 +192,9 @@ public class App {
             insertPatient.setInt(5, seqAdd);
             insertPatient.setInt(6, facilityID);
             insertPatient.executeQuery();
-            System.out.println("Sign Up Successful. Please Sign in Again");
+            System.out.println();
+            System.out.println("Sign Up Successful. Please Sign in Again.");
+            System.out.println();
             loginDisplay(conn);
         } else if (select == 2) {
             loginDisplay(conn);
