@@ -1,7 +1,6 @@
 package app;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.*;
@@ -76,37 +75,40 @@ class Patient {
             patientSeqID = rs3.getInt("CURRVAL");
         }
         this.sid = patientSeqID;
-
-        System.out.println("Please choose a symptom (Enter the CODE/Other/Done):");
-        HashMap<String, List> symptoms = new HashMap<>();
-        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME, BP_CODE FROM SYMPTOM");
-        ResultSet rs2 = stmt2.executeQuery();
-        while (rs2.next()) {
-            symptoms.put(rs2.getString("CODE"), Arrays.asList(rs2.getString("NAME"), rs2.getString("BP_CODE")));
-        }
-        int i = 0;
-        for (Map.Entry<String, List> map : symptoms.entrySet()) {
-            System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
-            i++;
-        }
-        System.out.println(i + ". OTHER");
-        System.out.println(i + 1 + ". DONE");
-        String select = scan.nextLine().trim().toUpperCase();
-        if (select.equals("OTHER")) {
-            System.out.println("Enter symptom name:");
-            String symtom_name = scan.nextLine();
-            String symtom_code = symtom_name.substring(0, 3).toUpperCase();
-            displayMetaData(symtom_name, symtom_code);
-        } else if (select.equals("DONE")) {
-            validatePatient();
-        } else {
-            displayMetaData(select, symptoms.get(select).get(0).toString());
-        }
+        int addSymptom = 0;
+        do {
+            System.out.println("Please choose a symptom (Enter the CODE/Other/Done):");
+            HashMap<String, List> symptoms = new HashMap<>();
+            PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME, BP_CODE FROM SYMPTOM");
+            ResultSet rs2 = stmt2.executeQuery();
+            while (rs2.next()) {
+                symptoms.put(rs2.getString("CODE"), Arrays.asList(rs2.getString("NAME"), rs2.getString("BP_CODE")));
+            }
+            int i = 0;
+            for (Map.Entry<String, List> map : symptoms.entrySet()) {
+                System.out.println(i + ". " + map.getKey() + ": " + map.getValue().get(0));
+                i++;
+            }
+            System.out.println(i + ". OTHER");
+            System.out.println(i + 1 + ". DONE");
+            String select = scan.nextLine().trim().toUpperCase();
+            if (select.equals("OTHER")) {
+                System.out.println("Enter symptom name:");
+                String symtom_name = scan.nextLine();
+                String symtom_code = symtom_name.substring(0, 3).toUpperCase();
+                displayMetaData(symtom_name, symtom_code, conn);
+            } else if (select.equals("DONE")) {
+                validatePatient(conn);
+            } else {
+                displayMetaData(select, symptoms.get(select).get(0).toString(), conn);
+            }
+            System.out.println("Do you wish to add more symptoms?: (0/1)");
+            addSymptom = scan.nextInt();
+            scan.nextLine();
+        } while (addSymptom == 1);
     }
 
-    private void displayMetaData(String symtom_code, String symtom_name) throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    private void displayMetaData(String symtom_code, String symtom_name, Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         String bodypart_code = "";
         Integer isRecurring = null;
@@ -125,7 +127,7 @@ class Patient {
             scan.nextLine();
             switch (select) {
                 case 1: {
-                    bodypart_code = displayBodyparts(scan);
+                    bodypart_code = displayBodyparts(scan, conn);
                     PreparedStatement stmtSym = conn.prepareStatement("select * from symptom where code = ? and bp_code = ?");
                     stmtSym.setString(1, bodypart_code);
                     stmtSym.setString(2, symtom_code);
@@ -150,14 +152,14 @@ class Patient {
                     break;
                 }
                 case 4: {
-                    HashMap severityScales = displaySeverityScales();
+                    HashMap severityScales = displaySeverityScales(conn);
                     System.out.println("Enter how you want enter the severity:");
                     System.out.println("1. Add new severity scale");
                     System.out.println("2. Choose existing scale");
                     int severitySelect = scan.nextInt();
                     switch (severitySelect) {
                         case 1:
-                            severityScaleID = addSeverityScale();
+                            severityScaleID = addSeverityScale(conn);
                         case 2:
                             System.out.println("Enter the scale_id (number) from above:");
                             severityScaleID = scan.nextInt();
@@ -188,9 +190,7 @@ class Patient {
         displayMenu(conn);
     }
 
-    private String displayBodyparts(Scanner scan) throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    private String displayBodyparts(Scanner scan, Connection conn) throws Exception {
         System.out.println("Enter body part code:");
         HashMap<String, String> bodyparts = new HashMap<>();
         PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM BODYPART");
@@ -204,13 +204,14 @@ class Patient {
             i++;
         }
         String bodypart_code = scan.nextLine();
-        conn.close();
+        while (!bodyparts.containsKey(bodypart_code)) {
+            System.out.println("Please select a valid bodypart from above:");
+            bodypart_code = scan.nextLine();
+        }
         return bodypart_code;
     }
 
-    private void validatePatient() throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    private void validatePatient(Connection conn) throws Exception {
         PreparedStatement validateSym = conn.prepareStatement("select id from patient_session where checked_out is null and (select count(*) from patient_sym_mapping where pid = ?)>0");
         validateSym.setInt(1, this.id);
         ResultSet rsValPat = validateSym.executeQuery();
@@ -218,10 +219,9 @@ class Patient {
             System.out.println("Please enter your symptoms:");
             displayCheckIn(conn);
         }
-        conn.close();
     }
 
-    private static int addSeverityScale() throws Exception {
+    private static int addSeverityScale(Connection conn) throws Exception {
         String scale = "";
         Scanner s = new Scanner(System.in);
         System.out.println("1. There is another level for this scale");
@@ -233,9 +233,9 @@ class Patient {
                 scale = makeSeverityScale(scale);
                 break;
             case 2:
-                updateScaleInTable(scale);
+                updateScaleInTable(scale, conn);
                 System.out.println("Updated severity scales:");
-                displaySeverityScales();
+                displaySeverityScales(conn);
                 System.out.println("Enter the scale_id (number) from above:");
                 severityScaleID = s.nextInt();
                 break;
@@ -249,16 +249,12 @@ class Patient {
         return currentScale;
     }
 
-    private static void updateScaleInTable(String scale) throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    private static void updateScaleInTable(String scale, Connection conn) throws Exception {
         PreparedStatement query = conn.prepareStatement("INSERT INTO SEVERITY_SCALE (SCALE) VALUES (" + scale + ")");
-        ResultSet rs = query.executeQuery();
+        query.executeQuery();
     }
 
-    private static HashMap displaySeverityScales() throws Exception {
-        Connection conn = DriverManager.getConnection(
-                "jdbc:oracle:thin:@orca.csc.ncsu.edu:1521:orcl01", "ssmehend", "200262272");
+    private static HashMap displaySeverityScales(Connection conn) throws Exception {
         System.out.println("Following are the severity scales:");
         HashMap<Integer, String> severityScales = new HashMap<>();
         PreparedStatement stmt = conn.prepareStatement("SELECT ID, SCALE FROM SEVERITY_SCALE");
