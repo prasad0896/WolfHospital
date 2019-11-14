@@ -17,7 +17,7 @@ public class EnterVitalTreatPatient{
 	
 	public void EnterVitalMenu(Connection conn, int id, String staff_id) throws Exception{
 		Scanner scan = new Scanner(System.in);
-        System.out.println("---------------------------- ENTER VITALS TREAT PATIENT MENU --------------------------");
+        System.out.println("---------------------------- STAFF PROCESS PATIENT MENU --------------------------");
         System.out.println("1. Enter Vitals");
         System.out.println("2. Treat Patient");
         System.out.println("3. Go Back");
@@ -51,20 +51,28 @@ public class EnterVitalTreatPatient{
 			System.out.println("Enter Systolic BP:");
 			int systolic_bp = s.nextInt();
 			System.out.println("Enter Diastolic BP");
-			int diastolic_bp = s.nextInt();		
+			int diastolic_bp = s.nextInt();
+			System.out.println("---------------------------- STAFF ENTER VITAL MENU --------------------------");
+	        System.out.println("1. Record");
+	        System.out.println("2. Go Back");
+	        int choice = s.nextInt();
+	        if(choice == 1) {
 			String addVitalSigns = "UPDATE PATIENT_SESSION SET BLOOD_PRESSURE_D = " + diastolic_bp + 
 					", BLOOD_PRESSURE_S = " + systolic_bp + ", TEMPERATURE = " + temp + ", CHECKIN_END = CURRENT_TIMESTAMP WHERE ID = "+ id;
 			//System.out.println(addVitalSigns);
 			ResultSet rs1 = executeStringQuery(conn, addVitalSigns);
 			triggerAssessmentRule(conn, id);
-			EnterVitalMenu(conn, id,staff_id);
+			//EnterVitalMenu(conn, id,staff_id);
+	        }
+	        else if(choice == 2) {
+	        	EnterVitalMenu(conn, id,staff_id);
+	        }
 		}
 		else {
 			System.out.println("Patient check-in phase completed! Cannot enter vitals again!");
 			EnterVitalMenu(conn, id,staff_id);
-		}
-		
-	}
+		}	
+}
 	
 	public void triggerAssessmentRule(Connection conn,int pid) throws Exception {
 		String priority = "INVALID";

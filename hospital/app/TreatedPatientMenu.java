@@ -33,6 +33,7 @@ public class TreatedPatientMenu extends Staff {
 
     void displayStaffPatientCheckout(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
+        System.out.println("----------------------------STAFF-PATIENT REPORT MENU --------------------------");
         System.out.println("1. Discharge Status");
         System.out.println("2. Referral Status");
         System.out.println("3. Treatment");

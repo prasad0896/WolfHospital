@@ -27,7 +27,7 @@ class Patient {
         } else if (select == 2) {
             displayCheckOutForm(conn);
         } else {
-            App.signIn(conn);
+            App.loginDisplay(conn);
         }
         scan.close();
         //System.exit(0);

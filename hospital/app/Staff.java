@@ -146,8 +146,10 @@ public class Staff {
         String scale = "";
         Scanner s = new Scanner(System.in);
         System.out.println("1. There is another level for this scale");
-        System.out.println("2. There is no other level for this scale. GO BACK");
+        System.out.println("2. There is no other level for this scale.");
+        System.out.println("3. Go Back");
         int choice = s.nextInt();
+        if(choice==1) {
         while (choice != 2) {
             scale = makeSeverityScale(scale);
             System.out.println("1. There is another level for this scale");
@@ -155,7 +157,14 @@ public class Staff {
             choice = s.nextInt();
         }
         updateScaleInTable(conn, scale);
-        StaffMenuDisplay(conn);
+        //StaffMenuDisplay(conn);
+        }
+        else if(choice==2) {
+        	System.out.println("Invalid. You need to enter atleast one scale value");
+        	addSeverityScale(conn);
+        } else if(choice==3) {
+        	StaffMenuDisplay(conn);
+        }
     }
 
     public String makeSeverityScale(String currentScale) {
@@ -186,8 +195,15 @@ public class Staff {
         s.nextLine();
         if (choice == count && rule.length() > 0) {
             System.out.println("Enter the priority of the rule \n" + rule);
-            String priority = s.nextLine();
-            String query = "INSERT INTO ASSESSMENT_RULE (RULES,PRIORITY) VALUES('" + rule + "', '" + priority + "')";
+            System.out.println("1.High");
+            System.out.println("2.Normal");
+            System.out.println("3.Quarantine");
+            HashMap<Integer,String> priority_map = new HashMap<Integer, String>();
+            priority_map.put(1, "High");
+            priority_map.put(2, "Normal");
+            priority_map.put(3, "Quanrantine");
+            int priority = s.nextInt();
+            String query = "INSERT INTO ASSESSMENT_RULE (RULES,PRIORITY) VALUES('" + rule + "', '" + priority_map.get(priority) + "')";
             ResultSet f = executeStringQuery(conn, query);
             this.rule_done = 1;
             return rule;
