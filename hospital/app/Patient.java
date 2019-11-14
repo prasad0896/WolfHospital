@@ -106,6 +106,8 @@ class Patient {
             addSymptom = scan.nextInt();
             scan.nextLine();
         } while (addSymptom == 1);
+        System.out.println("Check-in process completed.");
+        displayMenu(conn);
     }
 
     private void displayMetaData(String symtom_code, String symtom_name, Connection conn) throws Exception {
@@ -113,7 +115,6 @@ class Patient {
         String bodypart_code = "";
         Integer isRecurring = null;
         Integer duration = null;
-        int severityScaleID = 0;
         String severity = "";
         String cause = "";
         while (bodypart_code.isEmpty() || isRecurring == null || duration == null || cause.isEmpty() || severity.isEmpty()) {
@@ -127,18 +128,7 @@ class Patient {
             scan.nextLine();
             switch (select) {
                 case 1: {
-                    bodypart_code = displayBodyparts(scan, conn);
-                    PreparedStatement stmtSym = conn.prepareStatement("select * from symptom where code = ? and bp_code = ?");
-                    stmtSym.setString(1, bodypart_code);
-                    stmtSym.setString(2, symtom_code);
-                    ResultSet rs = stmtSym.executeQuery();
-                    if (!rs.next()) {
-                        PreparedStatement insertSym = conn.prepareStatement("insert into symptom (code, name, bp_code) values (?,?,?)");
-                        insertSym.setString(1, symtom_code);
-                        insertSym.setString(2, symtom_name);
-                        insertSym.setString(3, bodypart_code);
-                        insertSym.executeQuery();
-                    }
+                    bodypart_code = displayBodyparts(scan, conn, symtom_code);
                     break;
                 }
                 case 2: {
@@ -152,21 +142,7 @@ class Patient {
                     break;
                 }
                 case 4: {
-                    HashMap severityScales = displaySeverityScales(conn);
-                    System.out.println("Enter how you want enter the severity:");
-                    System.out.println("1. Add new severity scale");
-                    System.out.println("2. Choose existing scale");
-                    int severitySelect = scan.nextInt();
-                    switch (severitySelect) {
-                        case 1:
-                            severityScaleID = addSeverityScale(conn);
-                        case 2:
-                            System.out.println("Enter the scale_id (number) from above:");
-                            severityScaleID = scan.nextInt();
-                            scan.nextLine();
-                            System.out.println("Enter the severity of your pain:" + severityScales.get(severityScaleID));
-                            severity = scan.nextLine();
-                    }
+                    severity = displaySeverityScales(conn, symtom_code);
                     break;
                 }
                 case 5: {
@@ -185,18 +161,25 @@ class Patient {
         insertPatientSym.setString(6, cause);
         insertPatientSym.setString(7, bodypart_code);
         insertPatientSym.executeQuery();
-        scan.close();
-        System.out.println("Check-in process completed.");
-        displayMenu(conn);
     }
 
-    private String displayBodyparts(Scanner scan, Connection conn) throws Exception {
-        System.out.println("Enter body part code:");
+    private String displayBodyparts(Scanner scan, Connection conn, String symptom_code) throws Exception {
+        System.out.println("Enter the associated body part (CODE) from below:");
         HashMap<String, String> bodyparts = new HashMap<>();
-        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM BODYPART");
+        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME FROM BODYPART WHERE CODE IN (SELECT BP_CODE FROM SYMPTOM WHERE CODE = ?)");
+        stmt2.setString(1, symptom_code);
         ResultSet rs2 = stmt2.executeQuery();
-        while (rs2.next()) {
-            bodyparts.put(rs2.getString("CODE"), rs2.getString("NAME"));
+        if (!rs2.next()) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT CODE, NAME FROM BODYPART");
+            ResultSet rs = stmt.executeQuery();
+            while (rs.next()) {
+                bodyparts.put(rs.getString("CODE"), rs.getString("NAME"));
+            }
+        } else {
+            do {
+                bodyparts.put(rs2.getString("CODE"), rs2.getString("NAME"));
+            }
+            while (rs2.next());
         }
         int i = 0;
         for (Map.Entry<String, String> map : bodyparts.entrySet()) {
@@ -221,53 +204,18 @@ class Patient {
         }
     }
 
-    private static int addSeverityScale(Connection conn) throws Exception {
-        String scale = "";
-        Scanner s = new Scanner(System.in);
-        System.out.println("1. There is another level for this scale");
-        System.out.println("2. There is no other level for this scale. GO BACK");
-        int choice = s.nextInt();
-        int severityScaleID = 0;
-        switch (choice) {
-            case 1:
-                scale = makeSeverityScale(scale);
-                break;
-            case 2:
-                updateScaleInTable(scale, conn);
-                System.out.println("Updated severity scales:");
-                displaySeverityScales(conn);
-                System.out.println("Enter the scale_id (number) from above:");
-                severityScaleID = s.nextInt();
-                break;
-        }
-        return severityScaleID;
-    }
-
-    private static String makeSeverityScale(String currentScale) {
-        Scanner s = new Scanner(System.in);
-        currentScale += " " + s.nextLine();
-        return currentScale;
-    }
-
-    private static void updateScaleInTable(String scale, Connection conn) throws Exception {
-        PreparedStatement query = conn.prepareStatement("INSERT INTO SEVERITY_SCALE (SCALE) VALUES (" + scale + ")");
-        query.executeQuery();
-    }
-
-    private static HashMap displaySeverityScales(Connection conn) throws Exception {
+    private static String displaySeverityScales(Connection conn, String symtom_code) throws Exception {
         System.out.println("Following are the severity scales:");
-        HashMap<Integer, String> severityScales = new HashMap<>();
-        PreparedStatement stmt = conn.prepareStatement("SELECT ID, SCALE FROM SEVERITY_SCALE");
+        Scanner scan = new Scanner(System.in);
+        List severityScales = new ArrayList();
+        PreparedStatement stmt = conn.prepareStatement("SELECT SCALE FROM SEVERITY_SCALE WHERE ID IN (SELECT SEVERITY FROM SYM_SEVERITY WHERE CODE = ?)");
+        stmt.setString(1, symtom_code);
         ResultSet rs = stmt.executeQuery();
         while (rs.next()) {
-            severityScales.put(rs.getInt("ID"), rs.getString("SCALE"));
+            severityScales = Collections.singletonList(rs.getString("SCALE"));
         }
-        System.out.println("Severity scales available (ID: SCALE):");
-        for (Map.Entry<Integer, String> map : severityScales.entrySet()) {
-            System.out.println(map.getKey() + ": " + map.getValue());
-        }
-        conn.close();
-        return severityScales;
+        System.out.println("Enter the severity of your pain:" + severityScales);
+        return scan.nextLine();
     }
 
     private void displayCheckOutForm(Connection conn) throws Exception {
@@ -287,6 +235,5 @@ class Patient {
         } else {
             displayMenu(conn);
         }
-        scan.close();
     }
 }
