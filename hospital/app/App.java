@@ -91,7 +91,7 @@ public class App {
                     } else {
                         int patientID = rs1.getInt("PID");
                         System.out.println("Login Successful");
-                        Patient p = new Patient(patientID);
+                        Patient p = new Patient(patientID, facilityid);
                         p.displayMenu(conn);
                     }
                 case 0:

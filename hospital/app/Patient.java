@@ -9,10 +9,12 @@ import java.util.Map.Entry;
 class Patient {
 
     private final int id;
+    private final int facilityID;
     private int sid;
 
-    Patient(int id) {
+    Patient(int id, int facilityID) {
         this.id = id;
+        this.facilityID = facilityID;
     }
 
     void displayMenu(Connection conn) throws Exception {
@@ -51,10 +53,15 @@ class Patient {
         int facilityid = scan.nextInt();
         scan.nextLine();
 
-        //todo: move facility id from patient to session
-        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_END IS NOT NULL");
+        if (facilityid != this.facilityID) {
+            System.out.println();
+            System.out.println("You are not signed in at this Facility. Selecting the Facility you have signed in at: " + this.facilityID);
+            System.out.println();
+        }
+
+        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_END IS NOT NULL AND FACILITY_ID = ?");
         isCheckedIn.setInt(1, this.id);
-//        isCheckedIn.setInt(2, facilityid);
+        isCheckedIn.setInt(2, this.facilityID);
         ResultSet rs1 = isCheckedIn.executeQuery();
         if (rs1.next()) {
             System.out.println();
@@ -63,9 +70,10 @@ class Patient {
             displayMenu(conn);
         }
 
-        PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid) values (?,?)");
+        PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid, facility_id) values (?,?,?)");
         createPatientSession.setTimestamp(1, new java.sql.Timestamp(new java.util.Date().getTime()));
         createPatientSession.setInt(2, this.id);
+        createPatientSession.setInt(3, this.facilityID);
         createPatientSession.executeQuery();
 
         PreparedStatement getAddSeqID = conn.prepareStatement("select patient_session_id_seq.currval from dual");
@@ -195,8 +203,9 @@ class Patient {
     }
 
     private void validatePatient(Connection conn) throws Exception {
-        PreparedStatement validateSym = conn.prepareStatement("select id from patient_session where checked_out is null and (select count(*) from patient_sym_mapping where pid = ?)>0");
+        PreparedStatement validateSym = conn.prepareStatement("select id from patient_session where checked_out is null and (select count(*) from patient_sym_mapping where pid = ? and facility_id = ?)>0");
         validateSym.setInt(1, this.id);
+        validateSym.setInt(2, this.facilityID);
         ResultSet rsValPat = validateSym.executeQuery();
         if (!rsValPat.next()) {
             System.out.println("Please enter your symptoms:");
