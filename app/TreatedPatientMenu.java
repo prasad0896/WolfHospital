@@ -42,6 +42,7 @@ public class TreatedPatientMenu extends Staff {
         Integer referralStatusID = 0;
         String treatmentDesc = "";
         int addReportDetails = 0;
+        int select = 0;
         do {
             System.out.println("----------------------------STAFF-PATIENT REPORT MENU --------------------------");
             System.out.println("1. Discharge Status");
@@ -50,7 +51,7 @@ public class TreatedPatientMenu extends Staff {
             System.out.println("4. Negative Experience");
             System.out.println("5. Go back");
             System.out.println("6. Submit");
-            int select = scan.nextInt();
+            select = scan.nextInt();
             scan.nextLine();
             if (select == 1) {
                 dischargeStatus = displayDischargeStatus(conn);
@@ -75,11 +76,8 @@ public class TreatedPatientMenu extends Staff {
             if (select == 6) {
                 displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
             }
-            System.out.println("Please enter valid input:");
-            System.out.println("Do you wish to add more details?: (0/1)");
-            addReportDetails = scan.nextInt();
             scan.nextLine();
-        } while (dischargeStatus == 0 || treatmentDesc.isEmpty() || addReportDetails == 1);
+        } while (dischargeStatus == 0 || treatmentDesc.isEmpty() || select == 6);
     }
 
     int displayDischargeStatus(Connection conn) {

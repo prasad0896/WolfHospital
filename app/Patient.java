@@ -234,18 +234,61 @@ class Patient {
     }
 
     private void displayCheckOutForm(Connection conn) throws Exception {
-        //todo display report
-        System.out.println("Display the report that is filled by the staff?:");
+        System.out.println("The report filled by the staff:");
+        PreparedStatement displayReport = conn.prepareStatement("SELECT DISCHARGE_STATUS, TREATMENT_GIVEN, REFERRAL_STATUS_ID, NEGATIVE_EXP_ID FROM REPORT WHERE PATIENT_ID = ?");
+        displayReport.setInt(1, sid);
+        ResultSet rs = displayReport.executeQuery();
+        String treatmentDesc = null;
+        String dischargeStatus = null;
+        Integer ref = 0;
+        Integer negExp = 0;
+        Integer facilityID = 0;
+        Integer employeeID = 0;
+        String reason = null;
+        String negCode = null;
+        String negDesc = null;
+
+        while (rs.next()) {
+            dischargeStatus = rs.getString("DISCHARGE_STATUS");
+            treatmentDesc = rs.getString("TREATMENT_GIVEN");
+            ref = rs.getInt("REFERRAL_STATUS_ID");
+            negExp = rs.getInt("NEGATIVE_EXP_ID");
+        }
+
+        PreparedStatement getRefDetails = conn.prepareStatement("SELECT FACILITY_ID, EMPLOYEE_ID, REASON FROM REFERRAL_STATUS WHERE ID = ?");
+        getRefDetails.setInt(1, ref);
+        ResultSet rs1 = displayReport.executeQuery();
+        while (rs1.next()) {
+            facilityID = rs1.getInt("FACILITY_ID");
+            employeeID = rs1.getInt("EMPLOYEE_ID");
+            reason = rs1.getString("REASON");
+        }
+
+        PreparedStatement getNegExpDetails = conn.prepareStatement("SELECT CODE, DESCRIPTION FROM NEGATIVE_EXP WHERE N_ID = ?");
+        getNegExpDetails.setInt(1, negExp);
+        ResultSet rs2 = getNegExpDetails.executeQuery();
+        while (rs2.next()) {
+            negCode = rs1.getString("CODE");
+            negDesc = rs1.getString("DESCRIPTION");
+        }
+        System.out.println("Discharge Status: " + dischargeStatus);
+        System.out.println("Treatment Description: " + treatmentDesc);
+        System.out.println("Referral Facility ID: " + facilityID + " Referrer ID: " + employeeID);
+        System.out.println("Negative Experience: " + negCode + " " + negDesc);
+
         System.out.println("1. Yes");
         System.out.println("2. No");
         System.out.println("3. Go Back");
         Scanner scan = new Scanner(System.in);
         int select = scan.nextInt();
         if (select == 1) {
+            PreparedStatement confirmReport = conn.prepareStatement("update patient_session set patient_session.checkout_date=CURRENT_DATE where patient_session.id=?");
+            confirmReport.setInt(1, this.sid);
+            confirmReport.executeQuery();
             displayMenu(conn);
         } else if (select == 2) {
             System.out.println("Please enter a valid reason:");
-            String reason = scan.nextLine();
+            reason = scan.nextLine();
             //todo store reason?
         } else {
             displayMenu(conn);
