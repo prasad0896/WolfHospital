@@ -168,11 +168,12 @@ public class Staff {
         System.out.println("3. Go Back");
         int choice = s.nextInt();
         if(choice==1) {
-        while (choice != 2) {
+        while (choice != 2 || choice!=3) {
         	System.out.println("Enter the scale value");
             scale = makeSeverityScale(scale);
             System.out.println("1. There is another level for this scale");
-            System.out.println("2. There is no other level for this scale. GO BACK");
+            System.out.println("2. There is no other level for this scale.");
+            System.out.println("3. Go Back");
             choice = s.nextInt();
         }
         updateScaleInTable(conn, scale);
