@@ -7,16 +7,16 @@ import java.sql.SQLException;
 import java.util.*;
 
 public class TreatedPatientMenu extends Staff {
-    private final int pid;
+    private final int sid;
 
-    TreatedPatientMenu(String id, Integer pid) {
+    TreatedPatientMenu(String id, Integer sid) {
         super(id);
-        this.pid = pid;
+        this.sid = sid;
     }
 
     public void displayTreatedPatientMenu(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
-        System.out.println("----------------------------TREATED PATIENT MENU --------------------------");
+        System.out.println("----------------------------TREATED PATIENT MENU ----------------------------");
         System.out.println("1. Checkout");
         System.out.println("2. Go Back");
         int select = scan.nextInt();
@@ -25,7 +25,7 @@ public class TreatedPatientMenu extends Staff {
         } else if (select == 2) {
             StaffMenuDisplay(conn);
         } else {
-            System.out.println("Please enter a valid input.");
+            System.out.println("Please enter a valid input:");
             displayTreatedPatientMenu(conn);
         }
         scan.close();
@@ -43,33 +43,41 @@ public class TreatedPatientMenu extends Staff {
         int select = scan.nextInt();
         int dischargeStatus = 0;
         String reason = null;
-        String negExpCode = null;
+        Integer negExpCode = null;
         int referralStatusID = 0;
         String treatmentDesc = null;
-        if (select == 1) {
-            dischargeStatus = displayDischargeStatus(conn);
-            displayStaffPatientCheckout(conn);
-        } else if (select == 2) {
-            referralStatusID = displayReferralStatus(conn);
-        } else if (select == 3) {
-            System.out.println("Enter treatment description:");
-            treatmentDesc = scan.nextLine();
-            displayStaffPatientCheckout(conn);
-        } else if (select == 4) {
-            negExpCode = displayNegativeExperience(conn);
-        } else if (select == 5) {
-            displayTreatedPatientMenu(conn);
-        } else if (select == 6) {
-            displayReportConfirmation(conn);
-        } else {
+        while (dischargeStatus == 0 || treatmentDesc.isEmpty()) {
+            if (select == 1) {
+                dischargeStatus = displayDischargeStatus(conn);
+                displayStaffPatientCheckout(conn);
+            }
+            if (select == 2) {
+                if (dischargeStatus == 3) {
+                    referralStatusID = displayReferralStatus(conn);
+                }
+            }
+            if (select == 3) {
+                System.out.println("Enter treatment description:");
+                treatmentDesc = scan.nextLine();
+                displayStaffPatientCheckout(conn);
+            }
+            if (select == 4) {
+                negExpCode = displayNegativeExperience(conn);
+            }
+            if (select == 5) {
+                displayTreatedPatientMenu(conn);
+            }
+            if (select == 6) {
+                displayReportConfirmation(conn);
+            }
             System.out.println("Please enter valid input:");
             displayStaffPatientCheckout(conn);
         }
-        PreparedStatement insertPatientSym = conn.prepareStatement("insert into report (patient_id, referral_status_id, negative_experience, discharge_status, treatment_given) " +
+        PreparedStatement insertPatientSym = conn.prepareStatement("insert into report (patient_id, referral_status_id, negative_exp_id, discharge_status, treatment_given) " +
                 "values (?,?,?,?,?)");
-        insertPatientSym.setInt(1, this.pid);
+        insertPatientSym.setInt(1, this.sid);
         insertPatientSym.setInt(2, referralStatusID);
-        insertPatientSym.setString(3, negExpCode);
+        insertPatientSym.setInt(3, negExpCode);
         insertPatientSym.setInt(4, dischargeStatus);
         insertPatientSym.setString(5, treatmentDesc);
         insertPatientSym.executeQuery();
@@ -77,7 +85,7 @@ public class TreatedPatientMenu extends Staff {
         System.out.println("Check-in process completed.");
     }
 
-    int displayDischargeStatus(Connection conn) throws Exception {
+    int displayDischargeStatus(Connection conn) {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Successful Treatment");
         System.out.println("2. Deceased");
@@ -102,8 +110,31 @@ public class TreatedPatientMenu extends Staff {
         int referrerID = 0;
         String referralReasonCode = null;
         if (select == 1) {
+            PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
+            ResultSet rs1 = stmt.executeQuery();
+            HashMap<Integer, String> facilities = new HashMap<Integer, String>();
+            while (rs1.next()) {
+                facilities.put(rs1.getInt("FACILITY_ID"), rs1.getString("NAME"));
+            }
+            System.out.println("Facilities available (ID: NAME):");
+            for (Map.Entry<Integer, String> map : facilities.entrySet()) {
+                System.out.println(map.getKey() + ": " + map.getValue());
+            }
             System.out.println("Enter the Facility ID:");
             facilityID = scan.nextInt();
+            scan.nextLine();
+            PreparedStatement getFacilityID = conn.prepareStatement("select facility_id from staff where employee_id = ?");
+            getFacilityID.setString(1, this.id);
+            ResultSet rs = getFacilityID.executeQuery();
+            int selfFacilityID = 0;
+            while (rs.next()) {
+                selfFacilityID = rs.getInt("FACILITY_ID");
+            }
+            if (selfFacilityID == facilityID) {
+                System.out.println("Can NOT refer to the Facility you are employed at. Please enter another Facility ID:");
+                facilityID = scan.nextInt();
+                scan.nextLine();
+            }
             displayReferralStatus(conn);
         } else if (select == 2) {
             System.out.println("Enter the Referrer ID:");
@@ -122,7 +153,6 @@ public class TreatedPatientMenu extends Staff {
         insertReferralStatus.setString(3, referralReasonCode);
         insertReferralStatus.executeQuery();
         int refStatusID = 0;
-        //todo: add auto increment ID + trigger
         PreparedStatement getRefStatSeqID = conn.prepareStatement("select referral_status_id_seq.currval from dual");
         ResultSet rs3 = getRefStatSeqID.executeQuery();
         while (rs3.next()) {
@@ -162,29 +192,30 @@ public class TreatedPatientMenu extends Staff {
         return null;
     }
 
-    String displayNegativeExperience(Connection conn) throws SQLException {
+    Integer displayNegativeExperience(Connection conn) throws SQLException {
         Scanner scan = new Scanner(System.in);
-        System.out.println("Following are the negative experience possibilities:");
-        HashMap<String, String> negExps = new HashMap<>();
-        //todo create neg exp table - CODE TXT, DESC TXT
-        PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, DESCRIPTION FROM NEGATIVE_EXPERIENCE");
-        ResultSet rs2 = stmt2.executeQuery();
-        while (rs2.next()) {
-            negExps.put(rs2.getString("CODE"), rs2.getString("DESCRIPTION"));
-        }
-        int i = 0;
-        for (Map.Entry<String, String> map : negExps.entrySet()) {
-            System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
-            i++;
-        }
         System.out.println("1. Negative Experience Code");
         System.out.println("2. Go back");
-        String negExpCode = null;
         int select = scan.nextInt();
         if (select == 1) {
-            System.out.println("Enter a reason code from above:");
-            negExpCode = scan.nextLine();
-            return negExpCode;
+            System.out.println("Please select a reason (Number):");
+            System.out.println("1. Misdiagnosis");
+            System.out.println("2. Patient acquired an infection during hospital stay");
+            int neg_exp_code = scan.nextInt();
+            String neg_exp = neg_exp_code == 1 ? "Misdiagnosis" : "Infection_at_hospital";
+            scan.nextLine();
+            System.out.println("Please enter a text description for the chosen reason:");
+            String desc = scan.nextLine();
+            PreparedStatement insertNegExp = conn.prepareStatement("INSERT INTO NEGATIVE_EXP (CODE, DESCRIPTION) VALUES (?, ?)");
+            insertNegExp.setString(1, neg_exp);
+            insertNegExp.setString(2, desc);
+            PreparedStatement getAddSeqID = conn.prepareStatement("select neg_exp_id_seq.currval from dual");
+            ResultSet rs3 = getAddSeqID.executeQuery();
+            int negExpSeqID = 0;
+            while (rs3.next()) {
+                negExpSeqID = rs3.getInt("CURRVAL");
+            }
+            return negExpSeqID;
         } else if (select == 2) {
             return null;
         } else {

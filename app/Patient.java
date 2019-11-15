@@ -125,7 +125,8 @@ class Patient {
         Integer duration = null;
         String severity = "";
         String cause = "";
-        while (bodypart_code.isEmpty() || isRecurring == null || duration == null || cause.isEmpty() || severity.isEmpty()) {
+        //bodypart could be skipped
+        while (isRecurring == null || duration == null || cause.isEmpty() || severity.isEmpty()) {
             System.out.println("Please complete all of the below details:");
             System.out.println("1. Body part");
             System.out.println("2. Duration");
@@ -194,10 +195,14 @@ class Patient {
             System.out.println(i + ". " + map.getKey() + ": " + map.getValue());
             i++;
         }
+        System.out.println(i + ". None");
         String bodypart_code = scan.nextLine();
-        while (!bodyparts.containsKey(bodypart_code)) {
+        while (!bodyparts.containsKey(bodypart_code) || !bodypart_code.toLowerCase().equals("none")) {
             System.out.println("Please select a valid bodypart from above:");
             bodypart_code = scan.nextLine();
+        }
+        if (bodypart_code.toLowerCase().equals("none")) {
+            bodypart_code = null;
         }
         return bodypart_code;
     }
@@ -229,7 +234,7 @@ class Patient {
 
     private void displayCheckOutForm(Connection conn) throws Exception {
         //todo display report
-        System.out.println("Display the report that is filled by the staff:");
+        System.out.println("Display the report that is filled by the staff?:");
         System.out.println("1. Yes");
         System.out.println("2. No");
         System.out.println("3. Go Back");

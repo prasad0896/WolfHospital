@@ -345,4 +345,26 @@ begin
   select patient_session_id_seq.nextval
   into :new.ID
   from dual;
-end; 
+end;
+
+create sequence neg_exp_id_seq;
+
+create or replace trigger neg_exp_bi
+before insert on NEGATIVE_EXP
+for each row
+begin
+  select neg_exp_id_seq.nextval
+  into :new.N_ID
+  from dual;
+end;
+
+create sequence referral_status_id_seq;
+
+create or replace trigger referral_status_bi
+before insert on REFERRAL_STATUS
+for each row
+begin
+  select referral_status_id_seq.nextval
+  into :new.ID
+  from dual;
+end;
