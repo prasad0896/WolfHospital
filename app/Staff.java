@@ -76,7 +76,7 @@ public class Staff {
     }
     public int getCheckInWithNoPriority(Connection conn,int facility_id) throws Exception {
         String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
-        		"AND PATIENT.FACILITY_ID = "+facility_id +
+        		" AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY IS NULL";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
         ResultSet copyrs = executeStringQuery(conn, getCheckedInP);
@@ -95,7 +95,7 @@ public class Staff {
 
     public int getCheckedInPatientList(Connection conn, String priority_status, int facility_id) throws Exception {
         String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
-        		"AND PATIENT.FACILITY_ID = "+facility_id +
+        		" AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY= '" + priority_status + "'";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
         ResultSet copyrs = executeStringQuery(conn, getCheckedInP);

@@ -59,7 +59,7 @@ class Patient {
             System.out.println();
         }
 
-        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_END IS NOT NULL AND FACILITY_ID = ?");
+        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_START IS NOT NULL AND CHECKIN_END IS NULL AND FACILITY_ID = ?");
         isCheckedIn.setInt(1, this.id);
         isCheckedIn.setInt(2, this.facilityID);
         ResultSet rs1 = isCheckedIn.executeQuery();
@@ -68,7 +68,7 @@ class Patient {
             System.out.println("ERROR: Patient is already Checked-In. You can only Check-Out.");
             System.out.println();
             displayMenu(conn);
-        }
+        } else {
 
         PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid, facility_id) values (?,?,?)");
         createPatientSession.setTimestamp(1, new java.sql.Timestamp(new java.util.Date().getTime()));
@@ -116,6 +116,7 @@ class Patient {
         } while (addSymptom == 1);
         System.out.println("Check-in process completed.");
         displayMenu(conn);
+      }
     }
 
     private void displayMetaData(String symtom_code, String symtom_name, Connection conn) throws Exception {
@@ -197,7 +198,7 @@ class Patient {
         }
         System.out.println(i + ". None");
         String bodypart_code = scan.nextLine();
-        while (!bodyparts.containsKey(bodypart_code) || !bodypart_code.toLowerCase().equals("none")) {
+        while (!bodyparts.containsKey(bodypart_code) && !bodypart_code.toLowerCase().equals("none")) {
             System.out.println("Please select a valid bodypart from above:");
             bodypart_code = scan.nextLine();
         }
@@ -228,7 +229,7 @@ class Patient {
         while (rs.next()) {
             severityScales = Collections.singletonList(rs.getString("SCALE"));
         }
-        System.out.println("Enter the severity of your pain:" + severityScales);
+        System.out.println("Enter the severity:" + severityScales);
         return scan.nextLine();
     }
 

@@ -62,7 +62,7 @@ public class EnterVitalTreatPatient{
 			//System.out.println(addVitalSigns);
 			ResultSet rs1 = executeStringQuery(conn, addVitalSigns);
 			triggerAssessmentRule(conn, id);
-			//EnterVitalMenu(conn, id,staff_id);
+			EnterVitalMenu(conn, id,staff_id);
 	        }
 	        else if(choice == 2) {
 	        	EnterVitalMenu(conn, id,staff_id);
@@ -75,7 +75,7 @@ public class EnterVitalTreatPatient{
 }
 	
 	public void triggerAssessmentRule(Connection conn,int pid) throws Exception {
-		String priority = "INVALID";
+		String priority = "Normal";
 		int matched_size = 0;
 		String getPatientSymptom = "SELECT SYM_CODE,SEVERITY FROM PATIENT_SYM_MAPPING WHERE SID = "+pid;
 		ResultSet rs = executeStringQuery(conn, getPatientSymptom);
@@ -151,7 +151,12 @@ public class EnterVitalTreatPatient{
 		String updateCheckinTime = "UPDATE PATIENT_SESSION SET CHECKIN_END = CURRENT_TIMESTAMP WHERE PID ="+pid+"AND CHECKIN_END IS NOT NULL";
 		ResultSet rs = executeStringQuery(conn, updateCheckinTime);
 		// trigger assessmentRule
-		triggerAssessmentRule(conn,pid);
+		String checkPriority = "SELECT PRIORITY FROM PATIENT_SESSION WHERE ID = "+pid;
+		ResultSet rs11 = executeStringQuery(conn, checkPriority);
+		rs11.next();
+		if(rs11.getString(1)==null) {
+			triggerAssessmentRule(conn,pid);
+		}
 		// 2. Find if the staff can treat the patient
 		String staffCanTreatBodyPart = "SELECT BP_ID FROM STAFF_HAS_BODYPART WHERE EMP_ID="+staff_id;
 		ResultSet rs1 = executeStringQuery(conn, staffCanTreatBodyPart);
