@@ -231,11 +231,37 @@ public class Staff {
             return rule;
         }
         if (num_symcode.containsKey(choice)) {
-            String code = num_symcode.get(choice);
-            if (rule.length() == 0) {
+        	String code = num_symcode.get(choice);
+        	if (rule.length() == 0) {
                 rule += code + " ";
             } else {
                 rule += " & " + code + " ";
+            }
+        	// Display all body parts that could be associated with the symptom
+        	System.out.println("Following are the the body parts associated with the symptom");
+        	String symp_bodypart = "SELECT SYMPTOM.BP_CODE FROM SYMPTOM WHERE SYMPTOM.CODE = '"+code+"'";
+        	ResultSet sym_bp = executeStringQuery(conn, symp_bodypart);
+        	sym_bp.next();
+        	// if no bp associated with symptom, display all
+        	if(sym_bp.getString(1)==null) {
+        		String show_all_bp = "SELECT CODE,NAME FROM BODYPART";
+        		ResultSet body_parts = executeStringQuery(conn, show_all_bp);
+        		while(body_parts.next()) {
+        			System.out.println(body_parts.getString(1) + "\t"+ body_parts.getString(2));
+        		}
+        	}
+        	// else display the one associated
+        	else {
+	        	while(sym_bp.next()) {
+	        		System.out.println(sym_bp.getString(1) + "\t" + sym_bp.getString(2));
+	        	}
+        	}
+            System.out.println("Enter the body part CODE from above or else enter none");
+            String bp_code = s.nextLine();
+            if(!bp_code.equalsIgnoreCase("none")) {
+            	// add to rule : symCODE - bodypartcode
+            	rule = rule.strip();
+                rule+="-"+bp_code+" ";
             }
             System.out.println("The severity scale for this symptom is:");
             String getScale = "SELECT SCALE FROM SEVERITY_SCALE INNER JOIN SYM_SEVERITY ON SYM_SEVERITY.SEVERITY=SEVERITY_SCALE.ID WHERE SYM_SEVERITY.CODE = '" + code + "'";

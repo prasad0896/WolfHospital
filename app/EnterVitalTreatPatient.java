@@ -12,10 +12,18 @@ import java.util.Map;
 import java.util.Scanner;
 
 
-
 public class EnterVitalTreatPatient{
 	
 	public void EnterVitalMenu(Connection conn, int id, String staff_id) throws Exception{
+		// only medical staff has access
+		String check_medical = "SELECT DESIGNATION FROM STAFF WHERE EMPLOYEE_ID = "+staff_id;
+		ResultSet medical_or_not = executeStringQuery(conn, check_medical);
+		medical_or_not.next();
+		if(medical_or_not.getString(1).equalsIgnoreCase("non-medical")) {
+			System.out.println("Access Denied. Only Medical Staff has access. Going back!\n");
+			Staff s = new Staff(staff_id);
+			s.StaffMenuDisplay(conn);
+		}
 		Scanner scan = new Scanner(System.in);
         System.out.println("---------------------------- STAFF PROCESS PATIENT MENU --------------------------");
         System.out.println("1. Enter Vitals");
@@ -77,12 +85,16 @@ public class EnterVitalTreatPatient{
 	public void triggerAssessmentRule(Connection conn,int pid) throws Exception {
 		String priority = "Normal";
 		int matched_size = 0;
-		String getPatientSymptom = "SELECT SYM_CODE,SEVERITY FROM PATIENT_SYM_MAPPING WHERE SID = "+pid;
+		String getPatientSymptom = "SELECT SYM_CODE,SEVERITY,BP_CODE FROM PATIENT_SYM_MAPPING WHERE SID = "+pid;
 		ResultSet rs = executeStringQuery(conn, getPatientSymptom);
-		// symptoms and severity as entered by patient
+		// symptoms-bpcode and severity as entered by patient
 		HashMap<String,String> symptom_severity = new HashMap<>();
 		while(rs.next()) {
-			symptom_severity.put(rs.getString(1), rs.getString(2));
+			if(rs.getString(3)!=null) {
+			symptom_severity.put(rs.getString(1)+"-"+rs.getString(3), rs.getString(2));
+			} else {
+				symptom_severity.put(rs.getString(1), rs.getString(2));
+			}	
 		}
 		String getAssessmentRule = "SELECT * FROM ASSESSMENT_RULE ";
 		ResultSet rs_rule = executeStringQuery(conn, getAssessmentRule);
@@ -102,8 +114,16 @@ public class EnterVitalTreatPatient{
 			if((symptom_severity.keySet()).containsAll(rule_sym_scale.keySet())) {
 				for(Map.Entry<String,String> entry: rule_sym_scale.entrySet()) {
 					String[] scale_in_rule = entry.getValue().split(" "); // >= 2  OR = high
-					String sym_in_rule = entry.getKey();
-					String scale_patient = symptom_severity.get(sym_in_rule);
+					//System.out.println(Arrays.deepToString(scale_in_rule));
+					String[] sym_in_rule = entry.getKey().split("-"); // key is sym-bpcode
+					//System.out.println(Arrays.deepToString(sym_in_rule));
+					//String bp_code_in_rule = sym_in_rule[1];
+					String scale_patient;
+					if(sym_in_rule.length == 2) {
+						scale_patient = symptom_severity.get(sym_in_rule[0]+"-"+sym_in_rule[1]);
+					} else {
+						scale_patient = symptom_severity.get(sym_in_rule[0]);
+					}
 					switch(scale_in_rule[0]) {
 					case ">": if(Integer.parseInt(scale_patient) > Integer.parseInt(scale_in_rule[1])) {
 							continue;
@@ -183,11 +203,17 @@ public class EnterVitalTreatPatient{
 			}
 		}
 		while(rs1.next()) {
-			body_part_staff.add(rs1.getString(1));
+			if(rs1.getString(1)!=null) {
+				body_part_staff.add(rs1.getString(1));
+			}
 		}
-		if(body_part_patient==null || body_part_staff.containsAll(body_part_patient)) {
+		System.out.println("Patient" + body_part_patient.toString());
+		System.out.println("Staff" + body_part_staff.toString());
+		System.out.println(body_part_staff==null);
+		if(body_part_staff.isEmpty() || body_part_patient.isEmpty() || body_part_staff.containsAll(body_part_patient)) {
 			// set the treatment time for the patient
 			String updateTreatInPatientSession = "UPDATE PATIENT_SESSION SET TREATED='Y',TREATMENT_TIME=CURRENT_TIMESTAMP WHERE ID = "+pid;
+			System.out.println("Patient is in Treatment Phase now.\n");
 			ResultSet r = executeStringQuery(conn, updateTreatInPatientSession);
 		}
 		else {

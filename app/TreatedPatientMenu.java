@@ -78,7 +78,7 @@ public class TreatedPatientMenu extends Staff {
         } while (dischargeStatus.isEmpty() || treatmentDesc.isEmpty() || (select != 6 && select != 5));
     }
 
-    String displayDischargeStatus(Connection conn) {
+    String displayDischargeStatus(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Successful Treatment");
         System.out.println("2. Deceased");
@@ -87,7 +87,7 @@ public class TreatedPatientMenu extends Staff {
         int select = scan.nextInt();
         scan.nextLine();
         String dischargeStatusValue = null;
-        if (select < 1 || select > 4) {
+        if (select >= 1 && select < 4) {
             switch (select) {
                 case 1:
                     dischargeStatusValue = "Successful Treatment";
@@ -98,7 +98,11 @@ public class TreatedPatientMenu extends Staff {
                 case 3:
                     dischargeStatusValue = "Referred";
                     break;
+                    
             }
+        }else if(select==4) {
+        	displayStaffPatientCheckout(conn);
+        }else {
             System.out.println("Please enter a valid input.");
             displayDischargeStatus(conn);
         }
