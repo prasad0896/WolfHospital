@@ -102,7 +102,7 @@ public class Staff {
         if (!rs.isBeforeFirst()) {
             return 0;
         } else {
-            System.out.println("Checked In Patient IDs");
+            System.out.println("Checked In Patient IDs with priority = " + priority_status);
             while (rs.next()) {
                 System.out.println(rs.getInt(1));
 
@@ -168,7 +168,7 @@ public class Staff {
         System.out.println("3. Go Back");
         int choice = s.nextInt();
         if(choice==1) {
-        while (choice != 2 || choice!=3) {
+        while (choice==1) {
         	System.out.println("Enter the scale value");
             scale = makeSeverityScale(scale);
             System.out.println("1. There is another level for this scale");
@@ -177,6 +177,7 @@ public class Staff {
             choice = s.nextInt();
         }
         updateScaleInTable(conn, scale);
+        System.out.println("Severity scale Added in Database!\n");
         StaffMenuDisplay(conn);
         }
         else if(choice==2) {
@@ -194,6 +195,7 @@ public class Staff {
     }
 
     public void updateScaleInTable(Connection conn, String scale) throws Exception {
+    	scale = scale.strip(); // remove the trailing spaces
         String query = "INSERT INTO SEVERITY_SCALE (SCALE) VALUES ('" + scale + "')";
         ResultSet rs = executeStringQuery(conn, query);
     }
@@ -209,12 +211,12 @@ public class Staff {
             System.out.println(++count + ". " + rs.getString(1) + "\t" + rs.getString(2));
             num_symcode.put(count, rs.getString(1));
         }
-        System.out.println(++count + "SELECT PRIORITY");
-        System.out.println("Enter the Symptom from the list");
+        System.out.println(++count + "\t SELECT PRIORITY");
+        System.out.println("Enter choice to select the Symptom from the list");
         int choice = s.nextInt();
         s.nextLine();
         if (choice == count && rule.length() > 0) {
-            System.out.println("Enter the priority of the rule \n" + rule);
+            System.out.println("Enter the priority of the rule (1/2/3) \n" + rule);
             System.out.println("1.High");
             System.out.println("2.Normal");
             System.out.println("3.Quarantine");
@@ -258,6 +260,7 @@ public class Staff {
             rule = addAssessmentRule(conn, rule);
         }
         System.out.println("Assessment Rule added!");
+        this.rule_done = 0;
         StaffMenuDisplay(conn);
     }
 }
