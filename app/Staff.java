@@ -32,10 +32,11 @@ public class Staff {
         switch (select) {
             case 1:
                 int sum_of_all = 0;
-                sum_of_all += getCheckedInPatientList(conn, "HIGH");
-                sum_of_all += getCheckedInPatientList(conn, "QUARANTINE");
-                sum_of_all += getCheckedInPatientList(conn, "NORMAL");
-                sum_of_all += getCheckInWithNoPriority(conn);
+                int facility_id = getFacilityId(conn);
+                sum_of_all += getCheckedInPatientList(conn, "HIGH",facility_id);
+                sum_of_all += getCheckedInPatientList(conn, "QUARANTINE",facility_id);
+                sum_of_all += getCheckedInPatientList(conn, "NORMAL",facility_id);
+                sum_of_all += getCheckInWithNoPriority(conn,facility_id);
                 if (sum_of_all == 0) {
                     System.out.println("No checked in patients found! Going back!");
                     StaffMenuDisplay(conn);
@@ -67,8 +68,15 @@ public class Staff {
         return rs;
     }
 
-    public int getCheckInWithNoPriority(Connection conn) throws Exception {
+    public int getFacilityId(Connection conn) throws Exception {
+    	String fid = "SELECT FACILITY_ID FROM STAFF WHERE EMPLOYEE_ID = " + this.id;
+    	ResultSet rs = executeStringQuery(conn, fid);
+    	rs.next();
+    	return rs.getInt(1);
+    }
+    public int getCheckInWithNoPriority(Connection conn,int facility_id) throws Exception {
         String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
+        		"AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY IS NULL";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
         ResultSet copyrs = executeStringQuery(conn, getCheckedInP);
@@ -85,8 +93,9 @@ public class Staff {
         }
     }
 
-    public int getCheckedInPatientList(Connection conn, String priority_status) throws Exception {
+    public int getCheckedInPatientList(Connection conn, String priority_status, int facility_id) throws Exception {
         String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
+        		"AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY= '" + priority_status + "'";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
         ResultSet copyrs = executeStringQuery(conn, getCheckedInP);
@@ -125,15 +134,18 @@ public class Staff {
     }
 
     public void getTreatedPatientList(Connection conn) throws Exception {
-        String getTreatedPList = "SELECT PATIENT.PID FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
-                " AND PATIENT_SESSION.TREATED='Y'";
+        String getTreatedPList = "SELECT PATIENT.PID,PATIENT_SESSION.ID FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID AND PATIENT_SESSION.FACILITY_ID =" + getFacilityId(conn) 
+        + " AND PATIENT_SESSION.TREATED='Y' AND PATIENT_SESSION.ID NOT IN (SELECT PATIENT_ID FROM REPORT)";
         ResultSet rs = executeStringQuery(conn, getTreatedPList);
-        int patientID = 0;
+        HashMap<Integer,Integer> pid_to_sid = new HashMap<Integer, Integer>();
         while (rs.next()) {
-            patientID = rs.getInt(1);
+            System.out.println(rs.getInt(1));
+            pid_to_sid.put(rs.getInt(1), rs.getInt(2));
         }
-        //todo?: patient session ID needed, not patient ID
-        TreatedPatientMenu treatedPatientMenu = new TreatedPatientMenu(this.id, patientID);
+        Scanner s = new Scanner(System.in);
+        System.out.println("Enter the patient ID from the list above");
+        int chosen_id = s.nextInt();
+        TreatedPatientMenu treatedPatientMenu = new TreatedPatientMenu(this.id, pid_to_sid.get(chosen_id));
         treatedPatientMenu.displayTreatedPatientMenu(conn);
     }
 
