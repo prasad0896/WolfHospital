@@ -33,10 +33,17 @@ public class Symptom {
     	Scanner s = new Scanner(System.in);
     	System.out.println("Enter Symptom name");
     	String sym_name = s.nextLine();
-    	System.out.println("Do you want to enter body part? Enter Y(Yes) or N(No)");
-    	String choice = s.nextLine();
+    	System.out.println("Do you want to enter body part? Enter 1(Yes) or 0(No)");
+    	int choice = s.nextInt();
+    	s.nextLine();
     	String body_part = "";
-    	if(choice=="Y"|| choice=="Yes") {
+    	if(choice==1) {
+    		String bp = "SELECT CODE, NAME FROM BODYPART";
+    		ResultSet r = executeStringQuery(conn, bp);
+    		while(r.next()) {
+    			System.out.println(r.getString(1)+"\t"+r.getString(2));
+    		}
+    		System.out.println("Enter the body part CODE");
     		body_part = s.nextLine();
     	}
     	// add entry in symptom table and get the sym_code
@@ -49,7 +56,7 @@ public class Symptom {
     	if(body_part == "") {
     		query1 = "INSERT INTO SYMPTOM (CODE, NAME) VALUES ('" +sym_code + "', '"+sym_name + "')";
     	}else {
-    		query1 = "INSERT INTO SYMPTOM (CODE, NAME, BP_CODE) VALUES ('" +sym_code + "', '"+sym_name + "', "+ body_part+"')";
+    		query1 = "INSERT INTO SYMPTOM (CODE, NAME, BP_CODE) VALUES ('" +sym_code + "', '"+sym_name + "', '"+ body_part+"')";
     	}
     	ResultSet rs1 = executeStringQuery(conn, query1);
     	
@@ -67,7 +74,7 @@ public class Symptom {
     	ResultSet rs = executeStringQuery(conn, getSeverityScales);
     	ResultSet copyrs = executeStringQuery(conn, getSeverityScales);
     	while(rs.next()) {
-    		System.out.println(rs.getInt(1)+ "," + rs.getString(2));
+    		System.out.println(rs.getInt(1)+ "\t\t" + rs.getString(2));
     	}
     	int scale_id = s.nextInt();
     	int scale_found = 0;

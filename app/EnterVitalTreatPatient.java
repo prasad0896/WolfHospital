@@ -148,7 +148,7 @@ public class EnterVitalTreatPatient{
 	
 	public void TreatPatient(Connection conn, int pid, String staff_id) throws Exception {
 		// 1. Update the checkin end time for the user if it is null
-		String updateCheckinTime = "UPDATE PATIENT_SESSION SET CHECKIN_END = CURRENT_TIMESTAMP WHERE PID ="+pid+"AND CHECKIN_END IS NOT NULL";
+		String updateCheckinTime = "UPDATE PATIENT_SESSION SET CHECKIN_END = CURRENT_TIMESTAMP WHERE PID ="+pid+" AND CHECKIN_END IS NOT NULL";
 		ResultSet rs = executeStringQuery(conn, updateCheckinTime);
 		// trigger assessmentRule
 		String checkPriority = "SELECT PRIORITY FROM PATIENT_SESSION WHERE ID = "+pid;

@@ -33,9 +33,9 @@ public class Staff {
             case 1:
                 int sum_of_all = 0;
                 int facility_id = getFacilityId(conn);
-                sum_of_all += getCheckedInPatientList(conn, "HIGH",facility_id);
-                sum_of_all += getCheckedInPatientList(conn, "QUARANTINE",facility_id);
-                sum_of_all += getCheckedInPatientList(conn, "NORMAL",facility_id);
+                sum_of_all += getCheckedInPatientList(conn, "High",facility_id);
+                sum_of_all += getCheckedInPatientList(conn, "Quarantine",facility_id);
+                sum_of_all += getCheckedInPatientList(conn, "Normal",facility_id);
                 sum_of_all += getCheckInWithNoPriority(conn,facility_id);
                 if (sum_of_all == 0) {
                     System.out.println("No checked in patients found! Going back!");
@@ -138,15 +138,21 @@ public class Staff {
         + " AND PATIENT_SESSION.TREATED='Y' AND PATIENT_SESSION.ID NOT IN (SELECT PATIENT_ID FROM REPORT)";
         ResultSet rs = executeStringQuery(conn, getTreatedPList);
         HashMap<Integer,Integer> pid_to_sid = new HashMap<Integer, Integer>();
-        while (rs.next()) {
-            System.out.println(rs.getInt(1));
-            pid_to_sid.put(rs.getInt(1), rs.getInt(2));
+        if(!rs.isBeforeFirst()) {
+        	System.out.println("No TREATED Patients found!");
+        	StaffMenuDisplay(conn);
+        }else {
+        	
+	        while (rs.next()) {
+	            System.out.println(rs.getInt(1));
+	            pid_to_sid.put(rs.getInt(1), rs.getInt(2));
+	        }
+	        Scanner s = new Scanner(System.in);
+	        System.out.println("Enter the patient ID from the list above");
+	        int chosen_id = s.nextInt();
+	        TreatedPatientMenu treatedPatientMenu = new TreatedPatientMenu(this.id, pid_to_sid.get(chosen_id));
+	        treatedPatientMenu.displayTreatedPatientMenu(conn);
         }
-        Scanner s = new Scanner(System.in);
-        System.out.println("Enter the patient ID from the list above");
-        int chosen_id = s.nextInt();
-        TreatedPatientMenu treatedPatientMenu = new TreatedPatientMenu(this.id, pid_to_sid.get(chosen_id));
-        treatedPatientMenu.displayTreatedPatientMenu(conn);
     }
 
     public void addSymptoms(Connection conn) throws Exception {
@@ -163,13 +169,14 @@ public class Staff {
         int choice = s.nextInt();
         if(choice==1) {
         while (choice != 2) {
+        	System.out.println("Enter the scale value");
             scale = makeSeverityScale(scale);
             System.out.println("1. There is another level for this scale");
             System.out.println("2. There is no other level for this scale. GO BACK");
             choice = s.nextInt();
         }
         updateScaleInTable(conn, scale);
-        //StaffMenuDisplay(conn);
+        StaffMenuDisplay(conn);
         }
         else if(choice==2) {
         	System.out.println("Invalid. You need to enter atleast one scale value");

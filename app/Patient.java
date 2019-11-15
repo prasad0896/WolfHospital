@@ -59,7 +59,7 @@ class Patient {
             System.out.println();
         }
 
-        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_START IS NOT NULL AND CHECKIN_END IS NULL AND FACILITY_ID = ?");
+        PreparedStatement isCheckedIn = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKIN_START IS NOT NULL AND CHECKIN_END IS NULL AND CHECKOUT_DATE IS NULL AND FACILITY_ID = ?");
         isCheckedIn.setInt(1, this.id);
         isCheckedIn.setInt(2, this.facilityID);
         ResultSet rs1 = isCheckedIn.executeQuery();
