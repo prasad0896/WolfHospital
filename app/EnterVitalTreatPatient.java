@@ -101,7 +101,7 @@ public class EnterVitalTreatPatient{
 		//ArrayList<String> matchedRules = new ArrayList<String>();
 		while(rs_rule.next()) {
 			String rule = rs_rule.getString(2);
-			System.out.println(rule);
+			//System.out.println(rule);
 			String [] rule_has_syms_and_scale = rule.split(" & ");
 			//System.out.println(Arrays.deepToString(rule_has_syms_and_scale));
 			HashMap<String,String> rule_sym_scale = new HashMap<String, String>();

@@ -85,9 +85,13 @@ public class TreatedPatientMenu extends Staff {
                 displayTreatedPatientMenu(conn);
             }
             if (select == 6) {
+            	 if (dischargeStatus.toLowerCase().equals("referred") && referralStatusID == 0) {
+                 	System.out.println("Enter the Refferal Status");
+                 	displayStaffPatientCheckout(conn);
+                 }
                 displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
             }
-        } while (dischargeStatus.isEmpty() || treatmentDesc.isEmpty() || (select != 6 && select != 5));
+        } while (dischargeStatus.isEmpty() || treatmentDesc.isEmpty() || (select != 6 && select != 5)|| (dischargeStatus.equalsIgnoreCase("reffered")&& referralStatusID == 0));
     }
 
     String displayDischargeStatus(Connection conn) throws Exception {
@@ -133,7 +137,7 @@ public class TreatedPatientMenu extends Staff {
         int referrerID = 0;
         String referralReasonCode = null;
         if (select == 1) {
-            PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL");
+            PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL WHERE FACILITY_ID NOT IN (SELECT FACILITY_ID FROM STAFF WHERE EMPLOYEE_ID = "+ this.staffID +")");
             ResultSet rs1 = stmt.executeQuery();
             HashMap<Integer, String> facilities = new HashMap<Integer, String>();
             while (rs1.next()) {
