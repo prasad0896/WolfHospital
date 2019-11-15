@@ -31,12 +31,11 @@ public class TreatedPatientMenu extends Staff {
             System.out.println("Please enter a valid input:");
             displayTreatedPatientMenu(conn);
         }
-        scan.close();
     }
 
     void displayStaffPatientCheckout(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
-        Integer dischargeStatus = 0;
+        String dischargeStatus = null;
         String reason = null;
         Integer negExpCode = null;
         Integer referralStatusID = 0;
@@ -57,7 +56,7 @@ public class TreatedPatientMenu extends Staff {
                 dischargeStatus = displayDischargeStatus(conn);
             }
             if (select == 2) {
-                if (dischargeStatus == 3) {
+                if (dischargeStatus.toLowerCase().equals("referred")) {
                     referralStatusID = displayReferralStatus(conn);
                 } else {
                     System.out.println("Can NOT enter Referral is the Discharge Status is not Referred.");
@@ -76,11 +75,10 @@ public class TreatedPatientMenu extends Staff {
             if (select == 6) {
                 displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
             }
-            scan.nextLine();
-        } while (dischargeStatus == 0 || treatmentDesc.isEmpty() || select == 6);
+        } while (dischargeStatus.isEmpty() || treatmentDesc.isEmpty() || (select != 6 && select != 5));
     }
 
-    int displayDischargeStatus(Connection conn) {
+    String displayDischargeStatus(Connection conn) {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Successful Treatment");
         System.out.println("2. Deceased");
@@ -88,11 +86,23 @@ public class TreatedPatientMenu extends Staff {
         System.out.println("4. Go back");
         int select = scan.nextInt();
         scan.nextLine();
+        String dischargeStatusValue = null;
         if (select < 1 || select > 4) {
+            switch (select) {
+                case 1:
+                    dischargeStatusValue = "Successful Treatment";
+                    break;
+                case 2:
+                    dischargeStatusValue = "Deceased";
+                    break;
+                case 3:
+                    dischargeStatusValue = "Referred";
+                    break;
+            }
             System.out.println("Please enter a valid input.");
             displayDischargeStatus(conn);
         }
-        return select;
+        return dischargeStatusValue;
     }
 
     int displayReferralStatus(Connection conn) throws SQLException {
@@ -203,7 +213,7 @@ public class TreatedPatientMenu extends Staff {
             System.out.println("2. Patient acquired an infection during hospital stay");
             int neg_exp_code = scan.nextInt();
             scan.nextLine();
-            String neg_exp = neg_exp_code == 1 ? "Misdiagnosis" : "Infection_at_hospital";
+            String neg_exp = neg_exp_code == 1 ? "Misdiagnosis" : "Infected_at_hospital";
             System.out.println("Please enter a text description for the chosen reason:");
             String desc = scan.nextLine();
             PreparedStatement insertNegExp = conn.prepareStatement("INSERT INTO NEGATIVE_EXP (CODE, DESCRIPTION) VALUES (?, ?)");
@@ -230,7 +240,7 @@ public class TreatedPatientMenu extends Staff {
         return null;
     }
 
-    void displayReportConfirmation(Connection conn, Integer referralStatusID, Integer negExpCode, Integer dischargeStatus, String treatmentDesc) throws Exception {
+    void displayReportConfirmation(Connection conn, Integer referralStatusID, Integer negExpCode, String dischargeStatus, String treatmentDesc) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Confirm");
         System.out.println("2. Go back");
@@ -242,10 +252,9 @@ public class TreatedPatientMenu extends Staff {
             insertPatientSym.setInt(1, this.patientSessionID);
             insertPatientSym.setInt(2, referralStatusID);
             insertPatientSym.setInt(3, negExpCode);
-            insertPatientSym.setInt(4, dischargeStatus);
+            insertPatientSym.setString(4, dischargeStatus);
             insertPatientSym.setString(5, treatmentDesc);
             insertPatientSym.executeQuery();
-            scan.close();
             System.out.println("Check-out process completed.");
             StaffMenuDisplay(conn);
         } else if (select == 2) {

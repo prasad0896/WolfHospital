@@ -70,53 +70,53 @@ class Patient {
             displayMenu(conn);
         } else {
 
-        PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid, facility_id) values (?,?,?)");
-        createPatientSession.setTimestamp(1, new java.sql.Timestamp(new java.util.Date().getTime()));
-        createPatientSession.setInt(2, this.id);
-        createPatientSession.setInt(3, this.facilityID);
-        createPatientSession.executeQuery();
+            PreparedStatement createPatientSession = conn.prepareStatement("insert into patient_session (checkin_start, pid, facility_id) values (?,?,?)");
+            createPatientSession.setTimestamp(1, new java.sql.Timestamp(new java.util.Date().getTime()));
+            createPatientSession.setInt(2, this.id);
+            createPatientSession.setInt(3, this.facilityID);
+            createPatientSession.executeQuery();
 
-        PreparedStatement getAddSeqID = conn.prepareStatement("select patient_session_id_seq.currval from dual");
-        ResultSet rs3 = getAddSeqID.executeQuery();
-        int patientSeqID = 0;
-        while (rs3.next()) {
-            patientSeqID = rs3.getInt("CURRVAL");
+            PreparedStatement getAddSeqID = conn.prepareStatement("select patient_session_id_seq.currval from dual");
+            ResultSet rs3 = getAddSeqID.executeQuery();
+            int patientSeqID = 0;
+            while (rs3.next()) {
+                patientSeqID = rs3.getInt("CURRVAL");
+            }
+            this.sid = patientSeqID;
+            int addSymptom = 0;
+            do {
+                System.out.println("Please choose a symptom (Enter the CODE/Other/Done):");
+                HashMap<String, List> symptoms = new HashMap<>();
+                PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME, BP_CODE FROM SYMPTOM");
+                ResultSet rs2 = stmt2.executeQuery();
+                while (rs2.next()) {
+                    symptoms.put(rs2.getString("CODE"), Arrays.asList(rs2.getString("NAME"), rs2.getString("BP_CODE")));
+                }
+                int i = 0;
+                for (Map.Entry<String, List> map : symptoms.entrySet()) {
+                    System.out.println(i + ". " + map.getKey() + ": " + map.getValue().get(0));
+                    i++;
+                }
+                System.out.println(i + ". OTHER");
+                System.out.println(i + 1 + ". DONE");
+                String select = scan.nextLine().trim().toUpperCase();
+                if (select.equals("OTHER")) {
+                    System.out.println("Enter symptom name:");
+                    String symtom_name = scan.nextLine();
+                    String symtom_code = symtom_name.substring(0, 3).toUpperCase();
+                    displayMetaData(symtom_name, symtom_code, conn);
+                } else if (select.equals("DONE")) {
+                    validatePatient(conn);
+                } else {
+                    displayMetaData(select, symptoms.get(select).get(0).toString(), conn);
+                }
+                System.out.println("Do you wish to add more symptoms?: (0/1)");
+                addSymptom = scan.nextInt();
+                scan.nextLine();
+            } while (addSymptom == 1);
+            System.out.println("Check-in process completed.");
+            displayMenu(conn);
         }
-        this.sid = patientSeqID;
-        int addSymptom = 0;
-        do {
-            System.out.println("Please choose a symptom (Enter the CODE/Other/Done):");
-            HashMap<String, List> symptoms = new HashMap<>();
-            PreparedStatement stmt2 = conn.prepareStatement("SELECT CODE, NAME, BP_CODE FROM SYMPTOM");
-            ResultSet rs2 = stmt2.executeQuery();
-            while (rs2.next()) {
-                symptoms.put(rs2.getString("CODE"), Arrays.asList(rs2.getString("NAME"), rs2.getString("BP_CODE")));
-            }
-            int i = 0;
-            for (Map.Entry<String, List> map : symptoms.entrySet()) {
-                System.out.println(i + ". " + map.getKey() + ": " + map.getValue().get(0));
-                i++;
-            }
-            System.out.println(i + ". OTHER");
-            System.out.println(i + 1 + ". DONE");
-            String select = scan.nextLine().trim().toUpperCase();
-            if (select.equals("OTHER")) {
-                System.out.println("Enter symptom name:");
-                String symtom_name = scan.nextLine();
-                String symtom_code = symtom_name.substring(0, 3).toUpperCase();
-                displayMetaData(symtom_name, symtom_code, conn);
-            } else if (select.equals("DONE")) {
-                validatePatient(conn);
-            } else {
-                displayMetaData(select, symptoms.get(select).get(0).toString(), conn);
-            }
-            System.out.println("Do you wish to add more symptoms?: (0/1)");
-            addSymptom = scan.nextInt();
-            scan.nextLine();
-        } while (addSymptom == 1);
-        System.out.println("Check-in process completed.");
-        displayMenu(conn);
-      }
     }
 
     private void displayMetaData(String symtom_code, String symtom_name, Connection conn) throws Exception {
@@ -234,64 +234,104 @@ class Patient {
     }
 
     private void displayCheckOutForm(Connection conn) throws Exception {
-        System.out.println("The report filled by the staff:");
+        PreparedStatement getSessionID = conn.prepareStatement("SELECT ID FROM PATIENT_SESSION WHERE PID = ? AND CHECKOUT_DATE IS NULL AND TREATED = 'Y'");
+        getSessionID.setInt(1, this.id);
+        ResultSet rsSession = getSessionID.executeQuery();
+        while (rsSession.next()) {
+            this.sid = rsSession.getInt("ID");
+        }
         PreparedStatement displayReport = conn.prepareStatement("SELECT DISCHARGE_STATUS, TREATMENT_GIVEN, REFERRAL_STATUS_ID, NEGATIVE_EXP_ID FROM REPORT WHERE PATIENT_ID = ?");
         displayReport.setInt(1, sid);
         ResultSet rs = displayReport.executeQuery();
         String treatmentDesc = null;
         String dischargeStatus = null;
-        Integer ref = 0;
-        Integer negExp = 0;
+        Integer ref = null;
+        Integer negExp = null;
         Integer facilityID = 0;
         Integer employeeID = 0;
-        String reason = null;
+        String reason = "";
+        String reasonServiceName = null;
+        String reasonDesc = null;
         String negCode = null;
         String negDesc = null;
 
-        while (rs.next()) {
-            dischargeStatus = rs.getString("DISCHARGE_STATUS");
-            treatmentDesc = rs.getString("TREATMENT_GIVEN");
-            ref = rs.getInt("REFERRAL_STATUS_ID");
-            negExp = rs.getInt("NEGATIVE_EXP_ID");
-        }
-
-        PreparedStatement getRefDetails = conn.prepareStatement("SELECT FACILITY_ID, EMPLOYEE_ID, REASON FROM REFERRAL_STATUS WHERE ID = ?");
-        getRefDetails.setInt(1, ref);
-        ResultSet rs1 = displayReport.executeQuery();
-        while (rs1.next()) {
-            facilityID = rs1.getInt("FACILITY_ID");
-            employeeID = rs1.getInt("EMPLOYEE_ID");
-            reason = rs1.getString("REASON");
-        }
-
-        PreparedStatement getNegExpDetails = conn.prepareStatement("SELECT CODE, DESCRIPTION FROM NEGATIVE_EXP WHERE N_ID = ?");
-        getNegExpDetails.setInt(1, negExp);
-        ResultSet rs2 = getNegExpDetails.executeQuery();
-        while (rs2.next()) {
-            negCode = rs1.getString("CODE");
-            negDesc = rs1.getString("DESCRIPTION");
-        }
-        System.out.println("Discharge Status: " + dischargeStatus);
-        System.out.println("Treatment Description: " + treatmentDesc);
-        System.out.println("Referral Facility ID: " + facilityID + " Referrer ID: " + employeeID);
-        System.out.println("Negative Experience: " + negCode + " " + negDesc);
-
-        System.out.println("1. Yes");
-        System.out.println("2. No");
-        System.out.println("3. Go Back");
-        Scanner scan = new Scanner(System.in);
-        int select = scan.nextInt();
-        if (select == 1) {
-            PreparedStatement confirmReport = conn.prepareStatement("update patient_session set patient_session.checkout_date=CURRENT_DATE where patient_session.id=?");
-            confirmReport.setInt(1, this.sid);
-            confirmReport.executeQuery();
+        if (!rs.next()) {
+            System.out.println("There is no report to show.");
             displayMenu(conn);
-        } else if (select == 2) {
-            System.out.println("Please enter a valid reason:");
-            reason = scan.nextLine();
-            //todo store reason?
         } else {
-            displayMenu(conn);
+            do {
+                dischargeStatus = rs.getString("DISCHARGE_STATUS");
+                treatmentDesc = rs.getString("TREATMENT_GIVEN");
+                ref = rs.getInt("REFERRAL_STATUS_ID");
+                negExp = rs.getInt("NEGATIVE_EXP_ID");
+            } while (rs.next());
+
+            if (ref != null && ref != 0) {
+                PreparedStatement getRefDetails = conn.prepareStatement("SELECT FACILITY_ID, EMPLOYEE_ID, REASON_CODE FROM REFERRAL_STATUS WHERE ID = ?");
+                getRefDetails.setInt(1, ref);
+                ResultSet rs1 = getRefDetails.executeQuery();
+                while (rs1.next()) {
+                    facilityID = rs1.getInt("FACILITY_ID");
+                    employeeID = rs1.getInt("EMPLOYEE_ID");
+                    reason = rs1.getString("REASON_CODE");
+                }
+            }
+
+            if (negExp != null) {
+                PreparedStatement getNegExpDetails = conn.prepareStatement("SELECT CODE, DESCRIPTION FROM NEGATIVE_EXP WHERE N_ID = ?");
+                getNegExpDetails.setInt(1, negExp);
+                ResultSet rs2 = getNegExpDetails.executeQuery();
+                while (rs2.next()) {
+                    negCode = rs2.getString("CODE");
+                    negDesc = rs2.getString("DESCRIPTION");
+                }
+            }
+
+            if (!reason.isEmpty()) {
+                PreparedStatement getReasonDetails = conn.prepareStatement("SELECT REASON_CODE, SERVICE_NAME, DESCRIPTION FROM REASON WHERE REASON_CODE = ?");
+                getReasonDetails.setString(1, reason);
+                ResultSet rsReason = getReasonDetails.executeQuery();
+                while (rsReason.next()) {
+                    reasonServiceName = rsReason.getString("SERVICE_NAME");
+                    reasonDesc = rsReason.getString("DESCRIPTION");
+                }
+            }
+
+            System.out.println("The report details filled by the staff:");
+            System.out.println("Discharge Status: " + dischargeStatus);
+            System.out.println("Treatment Description: " + treatmentDesc);
+            if (ref != 0) {
+                System.out.println("Referral Facility ID: " + facilityID + " Referrer ID: " + employeeID);
+            }
+            if (!reason.isEmpty()) {
+                System.out.println("Referral Reason Service Name: " + reasonServiceName + " " + reasonDesc);
+            }
+            if (negExp != null) {
+                System.out.println("Negative Experience: " + negCode + " " + negDesc);
+            }
+
+            System.out.println("Confirm above details?:");
+            System.out.println("1. Yes");
+            System.out.println("2. No");
+            System.out.println("3. Go Back");
+            Scanner scan = new Scanner(System.in);
+            int select = scan.nextInt();
+            scan.nextLine();
+            if (select == 1) {
+                PreparedStatement confirmReport = conn.prepareStatement("update patient_session set patient_session.checkout_date=CURRENT_DATE where patient_session.id=?");
+                confirmReport.setInt(1, this.sid);
+                confirmReport.executeQuery();
+                System.out.println("REPORT SAVED.");
+                displayMenu(conn);
+            } else if (select == 2) {
+                System.out.println("Please enter a valid reason:");
+                reason = scan.nextLine();
+                //todo store reason?
+                System.out.println("REPORT NOT SAVED.");
+                displayMenu(conn);
+            } else {
+                displayMenu(conn);
+            }
         }
     }
 }
