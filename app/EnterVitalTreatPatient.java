@@ -103,7 +103,7 @@ public class EnterVitalTreatPatient{
 			String rule = rs_rule.getString(2);
 			System.out.println(rule);
 			String [] rule_has_syms_and_scale = rule.split(" & ");
-			System.out.println(Arrays.deepToString(rule_has_syms_and_scale));
+			//System.out.println(Arrays.deepToString(rule_has_syms_and_scale));
 			HashMap<String,String> rule_sym_scale = new HashMap<String, String>();
 			//store all symptoms present in the assessment rule in a arraylist
 			for(String sym: rule_has_syms_and_scale) {
@@ -207,9 +207,9 @@ public class EnterVitalTreatPatient{
 				body_part_staff.add(rs1.getString(1));
 			}
 		}
-		System.out.println("Patient" + body_part_patient.toString());
-		System.out.println("Staff" + body_part_staff.toString());
-		System.out.println(body_part_staff==null);
+		//System.out.println("Patient" + body_part_patient.toString());
+		//System.out.println("Staff" + body_part_staff.toString());
+		//System.out.println(body_part_staff==null);
 		if(body_part_staff.isEmpty() || body_part_patient.isEmpty() || body_part_staff.containsAll(body_part_patient)) {
 			// set the treatment time for the patient
 			String updateTreatInPatientSession = "UPDATE PATIENT_SESSION SET TREATED='Y',TREATMENT_TIME=CURRENT_TIMESTAMP WHERE ID = "+pid;

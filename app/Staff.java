@@ -48,18 +48,41 @@ public class Staff {
                 getTreatedPatientList(conn);
                 break;
             case 3:
-                addSymptoms(conn);
+                if(checkMedicalStaff(conn)) {
+                	addSymptoms(conn);
+                }else {
+                	StaffMenuDisplay(conn);
+                }
                 break;
             case 4:
-                addSeverityScale(conn);
+            	if(checkMedicalStaff(conn)) {
+            		addSeverityScale(conn);
+                }else {
+                	StaffMenuDisplay(conn);
+                }
                 break;
             case 5:
-                callAddAssesment(conn, "");
+            	if(checkMedicalStaff(conn)) {
+            		callAddAssesment(conn, "");
+                }else {
+                	StaffMenuDisplay(conn);
+                }
                 break;
             case 6:
                 App.loginDisplay(conn);
-                ;
+                
         }
+    }
+    
+    public boolean checkMedicalStaff(Connection conn) throws Exception {
+    	String check_medical = "SELECT DESIGNATION FROM STAFF WHERE EMPLOYEE_ID = "+this.id;
+		ResultSet medical_or_not = executeStringQuery(conn, check_medical);
+		medical_or_not.next();
+		if(medical_or_not.getString(1).equalsIgnoreCase("non-medical")) {
+			System.out.println("Access Denied. Only Medical Staff has access. Going back!\n");
+			return false;
+		}
+		return true;
     }
 
     public ResultSet executeStringQuery(Connection conn, String query) throws Exception {
@@ -252,8 +275,9 @@ public class Staff {
         	}
         	// else display the one associated
         	else {
+        		System.out.println(sym_bp.getString(1));
 	        	while(sym_bp.next()) {
-	        		System.out.println(sym_bp.getString(1) + "\t" + sym_bp.getString(2));
+	        		System.out.println(sym_bp.getString(1));
 	        	}
         	}
             System.out.println("Enter the body part CODE from above or else enter none");

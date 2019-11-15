@@ -17,6 +17,14 @@ public class TreatedPatientMenu extends Staff {
     }
 
     public void displayTreatedPatientMenu(Connection conn) throws Exception {
+    	// only medical staff has access
+		String check_medical = "SELECT DESIGNATION FROM STAFF WHERE EMPLOYEE_ID = "+this.staffID;
+		ResultSet medical_or_not = executeStringQuery(conn, check_medical);
+		medical_or_not.next();
+		if(medical_or_not.getString(1).equalsIgnoreCase("non-medical")) {
+			System.out.println("Access Denied. Only Medical Staff has access. Going back!\n");
+			StaffMenuDisplay(conn);
+		}
         Scanner scan = new Scanner(System.in);
         System.out.println("----------------------------TREATED PATIENT MENU ----------------------------");
         System.out.println("1. Checkout");
@@ -56,7 +64,11 @@ public class TreatedPatientMenu extends Staff {
                 dischargeStatus = displayDischargeStatus(conn);
             }
             if (select == 2) {
-                if (dischargeStatus.toLowerCase().equals("referred")) {
+            	if(dischargeStatus==null) {
+            		System.out.println("Enter discharge status first\n\n");
+            		displayStaffPatientCheckout(conn);
+            	}
+            	else if (dischargeStatus.toLowerCase().equals("referred")) {
                     referralStatusID = displayReferralStatus(conn);
                 } else {
                     System.out.println("Can NOT enter Referral is the Discharge Status is not Referred.");
