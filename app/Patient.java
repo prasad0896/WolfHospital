@@ -101,14 +101,14 @@ class Patient {
                 System.out.println(i + 1 + ". DONE");
                 String select = scan.nextLine().trim().toUpperCase();
                 if (select.equals("OTHER")) {
-                    System.out.println("Enter symptom name:");
+                    System.out.println("Enter Description:");
                     String symtom_name = scan.nextLine();
-                    String symtom_code = symtom_name.substring(0, 3).toUpperCase();
-                    displayMetaData(symtom_name, symtom_code, conn);
+//                    String symtom_code = symtom_name.substring(0, 3).toUpperCase();
+                    displayMetaData(symtom_name, null, symtom_name, conn);
                 } else if (select.equals("DONE")) {
                     validatePatient(conn);
                 } else {
-                    displayMetaData(select, symptoms.get(select).get(0).toString(), conn);
+                    displayMetaData(select, symptoms.get(select).get(0).toString(), null, conn);
                 }
                 System.out.println("Do you wish to add more symptoms?: (0/1)");
                 addSymptom = scan.nextInt();
@@ -119,7 +119,7 @@ class Patient {
         }
     }
 
-    private void displayMetaData(String symtom_code, String symtom_name, Connection conn) throws Exception {
+    private void displayMetaData(String symtom_code, String symtom_name, String description, Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         String bodypart_code = "";
         Integer isRecurring = null;
@@ -138,7 +138,11 @@ class Patient {
             scan.nextLine();
             switch (select) {
                 case 1: {
-                    bodypart_code = displayBodyparts(scan, conn, symtom_code);
+                	if(symtom_code==null) {
+                		System.out.println("Cannot enter body part as symptom does not exist");
+                	}else {
+                		bodypart_code = displayBodyparts(scan, conn, symtom_code);
+                	}
                     break;
                 }
                 case 2: {
@@ -162,6 +166,7 @@ class Patient {
                 }
             }
         }
+        if(symtom_code!=null) {
         PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, sym_code, severity, duration, reoccuring, cause, bp_code) values (?,?,?,?,?,?,?)");
         insertPatientSym.setInt(1, this.sid);
         insertPatientSym.setString(2, symtom_code);
@@ -171,6 +176,16 @@ class Patient {
         insertPatientSym.setString(6, cause);
         insertPatientSym.setString(7, bodypart_code);
         insertPatientSym.executeQuery();
+        } else if(symtom_code==null) {
+        	PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, severity, duration, reoccuring, cause, other_description) values (?,?,?,?,?,?)");
+        	insertPatientSym.setInt(1, this.sid);
+        	insertPatientSym.setString(2, severity);
+        	insertPatientSym.setInt(3, duration);
+        	insertPatientSym.setInt(4, isRecurring);
+        	insertPatientSym.setString(5, cause);
+        	insertPatientSym.setString(6,description);
+        	insertPatientSym.executeQuery();
+        }
     }
 
     private String displayBodyparts(Scanner scan, Connection conn, String symptom_code) throws Exception {
