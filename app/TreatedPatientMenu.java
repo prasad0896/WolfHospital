@@ -137,7 +137,7 @@ public class TreatedPatientMenu extends Staff {
         scan.nextLine();
         int facilityID = 0;
         int referrerID = 0;
-        List referralReasonCode = null;
+        List<Integer> referralReasonCode = null;
         if (select == 1) {
             PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL WHERE FACILITY_ID NOT IN (SELECT FACILITY_ID FROM STAFF WHERE EMPLOYEE_ID = " + this.staffID + ")");
             ResultSet rs1 = stmt.executeQuery();
@@ -176,8 +176,8 @@ public class TreatedPatientMenu extends Staff {
             System.out.println("Please enter a valid input.");
             displayReferralStatus(conn);
         }
-        PreparedStatement insertReferralStatus = conn.prepareStatement("insert into referral_status (facility_id, employee_id, reason_code) " +
-                "values (?,?,?)");
+        PreparedStatement insertReferralStatus = conn.prepareStatement("insert into referral_status (facility_id, employee_id) " +
+                "values (?,?)");
         insertReferralStatus.setInt(1, facilityID);
         insertReferralStatus.setInt(2, referrerID);
         insertReferralStatus.executeQuery();
@@ -187,16 +187,16 @@ public class TreatedPatientMenu extends Staff {
         while (rs3.next()) {
             refStatusID = rs3.getInt("CURRVAL");
         }
-        for (Object x : referralReasonCode) {
+        for (Integer x : referralReasonCode) {
             PreparedStatement insertRefStatusReasonMapping = conn.prepareStatement("insert into referral_reason_mapping(REFFERAL_STATUS_ID, REASON_CODE_ID) values(?, ?)");
             insertRefStatusReasonMapping.setInt(1, refStatusID);
-            insertRefStatusReasonMapping.setInt(2, (Integer) x);
+            insertRefStatusReasonMapping.setInt(2, x);
             insertRefStatusReasonMapping.executeQuery();
         }
         return refStatusID;
     }
 
-    List displayReferralReason(Connection conn) throws Exception {
+    List<Integer> displayReferralReason(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
         List<Integer> reasonIDs = null;
         System.out.println("1. Reason");
@@ -205,7 +205,7 @@ public class TreatedPatientMenu extends Staff {
         scan.nextLine();
         int reasonCount = 0;
         while (reasonCount < 4 && select == 1) {
-            System.out.println("Following are the reasons available:");
+            System.out.println("Following are the services available:");
             List services = null;
             PreparedStatement getServices = conn.prepareStatement("select sd.name from hospital_service_dept_mapping hsdm inner join service_dept sd on hsdm.service_dept_id = sd.id where facility_id not in ?");
             getServices.setInt(1, getFacilityId(conn));
