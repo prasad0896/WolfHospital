@@ -277,13 +277,13 @@ class Patient {
             } while (rs.next());
 
             if (ref != null && ref != 0) {
-                PreparedStatement getRefDetails = conn.prepareStatement("SELECT FACILITY_ID, EMPLOYEE_ID, REASON_CODE FROM REFERRAL_STATUS WHERE ID = ?");
+                PreparedStatement getRefDetails = conn.prepareStatement("SELECT FACILITY_ID, EMPLOYEE_ID, ID FROM REFERRAL_STATUS WHERE ID = ?");
                 getRefDetails.setInt(1, ref);
                 ResultSet rs1 = getRefDetails.executeQuery();
                 while (rs1.next()) {
                     facilityID = rs1.getInt("FACILITY_ID");
                     employeeID = rs1.getInt("EMPLOYEE_ID");
-                    reason = rs1.getString("REASON_CODE");
+                    reason = rs1.getString("ID");
                 }
             }
 
@@ -305,6 +305,7 @@ class Patient {
                     reasonServiceName = rsReason.getString("SERVICE_NAME");
                     reasonDesc = rsReason.getString("DESCRIPTION");
                 }
+               System.out.println(reasonServiceName+reasonDesc);
             }
 
             System.out.println("The report details filled by the staff:");
