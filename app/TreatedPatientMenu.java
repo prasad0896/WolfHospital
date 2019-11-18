@@ -4,14 +4,24 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 
+import oracle.jdbc.proxy.annotation.Pre;
+
 public class TreatedPatientMenu extends Staff {
     private final int patientSessionID;
     private final String staffID;
+    private int ref_facility_id = 0;
+    private int ref_emp_id = 0;
+    List<Integer> ref_reason_codes= new ArrayList<Integer>();
+    private PreparedStatement insertNegExp;
+    private PreparedStatement insertReason;
+    private HashMap<String,String> negExp = new HashMap<String, String>();
+
 
     TreatedPatientMenu(String staffID, Integer patientSessionID) {
         super(staffID);
@@ -35,7 +45,7 @@ public class TreatedPatientMenu extends Staff {
         int select = scan.nextInt();
         scan.nextLine();
         if (select == 1) {
-            displayStaffPatientCheckout(conn);
+            displayStaffPatientCheckout(conn,null,null,0,0);
         } else if (select == 2) {
             StaffMenuDisplay(conn);
         } else {
@@ -44,14 +54,10 @@ public class TreatedPatientMenu extends Staff {
         }
     }
 
-    void displayStaffPatientCheckout(Connection conn) throws Exception {
+    void displayStaffPatientCheckout(Connection conn,String dischargeStatus,String treatmentDesc, Integer referralStatusID, Integer negExpCode) throws Exception {
         Scanner scan = new Scanner(System.in);
-        String dischargeStatus = null;
-        String reason = null;
-        Integer negExpCode = null;
-        Integer referralStatusID = 0;
-        String treatmentDesc = "";
-        int addReportDetails = 0;
+//        String reason = null;
+//        int addReportDetails = 0;
         int select = 0;
         do {
             System.out.println("----------------------------STAFF-PATIENT REPORT MENU --------------------------");
@@ -64,14 +70,17 @@ public class TreatedPatientMenu extends Staff {
             select = scan.nextInt();
             scan.nextLine();
             if (select == 1) {
-                dischargeStatus = displayDischargeStatus(conn);
+                dischargeStatus = displayDischargeStatus(conn,treatmentDesc,referralStatusID, negExpCode);
+                System.out.println(dischargeStatus);
             }
             if (select == 2) {
                 if (dischargeStatus == null) {
                     System.out.println("Enter discharge status first\n\n");
-                    displayStaffPatientCheckout(conn);
+                    //displayStaffPatientCheckout(conn);
                 } else if (dischargeStatus.toLowerCase().equals("referred")) {
-                    referralStatusID = displayReferralStatus(conn);
+                	int facilityID = 0;
+                    int referrerID = 0;
+                    displayReferralStatus(conn,facilityID,referrerID,dischargeStatus,treatmentDesc,referralStatusID,negExpCode);
                 } else {
                     System.out.println("Can NOT enter Referral is the Discharge Status is not Referred.");
                 }
@@ -87,16 +96,28 @@ public class TreatedPatientMenu extends Staff {
                 displayTreatedPatientMenu(conn);
             }
             if (select == 6) {
-                if (dischargeStatus.toLowerCase().equals("referred") && referralStatusID == 0) {
+            	//System.out.println(dischargeStatus);
+            	//System.out.println(treatmentDesc);
+            	if(dischargeStatus == null || treatmentDesc==null) {
+            		System.out.println("Enter discharge status and treatment description. Its mandatory.");
+            	}
+            	else if ((dischargeStatus!=null && dischargeStatus.toLowerCase().equals("referred") && referralStatusID == 0)) {
                     System.out.println("Enter the Refferal Status");
-                    displayStaffPatientCheckout(conn);
+                } else if(dischargeStatus!=null && dischargeStatus.toLowerCase().equals("referred") && referralStatusID!=0){
+                	if(this.ref_emp_id!=0 && this.ref_facility_id!=0 && this.ref_reason_codes!=null) {
+	                	displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
+                	}
+                	break;
+                } else {
+                	displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
+                	break;
                 }
-                displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
             }
-        } while (dischargeStatus.isEmpty() || treatmentDesc.isEmpty() || (select != 6 && select != 5) || (dischargeStatus.equalsIgnoreCase("referred") && referralStatusID == 0));
+        } while (select <=6 && select >=1);
+        
     }
 
-    String displayDischargeStatus(Connection conn) throws Exception {
+    String displayDischargeStatus(Connection conn,String treatmentDesc, Integer referralStatusID, Integer negExpCode) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Successful Treatment");
         System.out.println("2. Deceased");
@@ -119,86 +140,101 @@ public class TreatedPatientMenu extends Staff {
 
             }
         } else if (select == 4) {
-            displayStaffPatientCheckout(conn);
+            displayStaffPatientCheckout(conn,dischargeStatusValue,treatmentDesc,referralStatusID, negExpCode);
         } else {
             System.out.println("Please enter a valid input.");
-            displayDischargeStatus(conn);
+            displayDischargeStatus(conn,treatmentDesc,referralStatusID, negExpCode);
         }
         return dischargeStatusValue;
     }
 
-    int displayReferralStatus(Connection conn) throws Exception {
+    void displayReferralStatus(Connection conn, int facilityID,int referrerID,String dischargeStatus,String treatmentDesc,Integer referralStatusID, Integer negExpCode) throws Exception {
         Scanner scan = new Scanner(System.in);
         System.out.println("1. Facility ID");
         System.out.println("2. Referrer ID");
         System.out.println("3. Add reason");
         System.out.println("4. Go back");
         int select = scan.nextInt();
+        int referralStatusId = 0;
         scan.nextLine();
-        int facilityID = 0;
-        int referrerID = 0;
-        List<Integer> referralReasonCode = null;
-        if (select == 1) {
-            PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL WHERE FACILITY_ID NOT IN (SELECT FACILITY_ID FROM STAFF WHERE EMPLOYEE_ID = " + this.staffID + ")");
-            ResultSet rs1 = stmt.executeQuery();
-            HashMap<Integer, String> facilities = new HashMap<Integer, String>();
-            while (rs1.next()) {
-                facilities.put(rs1.getInt("FACILITY_ID"), rs1.getString("NAME"));
-            }
-            System.out.println("Facilities available (ID: NAME):");
-            for (Map.Entry<Integer, String> map : facilities.entrySet()) {
-                System.out.println(map.getKey() + ": " + map.getValue());
-            }
-            System.out.println("Enter the Facility ID:");
-            facilityID = scan.nextInt();
-            scan.nextLine();
-            PreparedStatement getFacilityID = conn.prepareStatement("select facility_id from staff where employee_id = ?");
-            getFacilityID.setString(1, this.staffID);
-            ResultSet rs = getFacilityID.executeQuery();
-            int selfFacilityID = 0;
-            while (rs.next()) {
-                selfFacilityID = rs.getInt("FACILITY_ID");
-            }
-            if (selfFacilityID == facilityID) {
-                System.out.println("Can NOT refer to the Facility you are employed at. Please enter another Facility ID:");
-                facilityID = scan.nextInt();
-                scan.nextLine();
-            }
-            displayReferralStatus(conn);
-        } else if (select == 2) {
-            System.out.println("Enter the Referrer ID:");
-            referrerID = scan.nextInt();
-            scan.nextLine();
-            displayReferralReason(conn);
-        } else if (select == 3) {
-            referralReasonCode = displayReferralReason(conn);
-        } else {
-            System.out.println("Please enter a valid input.");
-            displayReferralStatus(conn);
+        List<Integer> referralReasonCode = new ArrayList<Integer>();
+        while(select<=4 && select>=1) {
+	        if (select == 1) {
+	            PreparedStatement stmt = conn.prepareStatement("SELECT NAME,FACILITY_ID FROM HOSPITAL WHERE FACILITY_ID NOT IN (SELECT FACILITY_ID FROM STAFF WHERE EMPLOYEE_ID = " + this.staffID + ")");
+	            ResultSet rs1 = stmt.executeQuery();
+	            HashMap<Integer, String> facilities = new HashMap<Integer, String>();
+	            while (rs1.next()) {
+	                facilities.put(rs1.getInt("FACILITY_ID"), rs1.getString("NAME"));
+	            }
+	            System.out.println("Facilities available (ID: NAME):");
+	            for (Map.Entry<Integer, String> map : facilities.entrySet()) {
+	                System.out.println(map.getKey() + ": " + map.getValue());
+	            }
+	            System.out.println("Enter the Facility ID:");
+	            facilityID = scan.nextInt();
+	            scan.nextLine();
+	            PreparedStatement getFacilityID = conn.prepareStatement("select facility_id from staff where employee_id = ?");
+	            getFacilityID.setString(1, this.staffID);
+	            ResultSet rs = getFacilityID.executeQuery();
+	            int selfFacilityID = 0;
+	            while (rs.next()) {
+	                selfFacilityID = rs.getInt("FACILITY_ID");
+	            }
+	            if (selfFacilityID == facilityID) {
+	                System.out.println("Can NOT refer to the Facility you are employed at. Please enter another Facility ID:");
+	                facilityID = scan.nextInt();
+	                scan.nextLine();
+	            }
+	        } else if (select == 2) {
+	            System.out.println("Enter the Referrer ID:");
+	            referrerID = scan.nextInt();
+	            scan.nextLine();
+	            //displayReferralReason(conn);
+	        } else if (select == 3) {
+	            referralReasonCode = displayReferralReason(conn);
+	            this.ref_emp_id = referrerID;
+	            this.ref_facility_id = facilityID;
+	            this.ref_reason_codes = referralReasonCode;
+	            referralStatusId = 1;
+	        } else if(select == 4) {
+	        	displayStaffPatientCheckout(conn,dischargeStatus,treatmentDesc,referralStatusId, negExpCode);
+	        	break;
+	        }
+	        System.out.println("1. Facility ID");
+	        System.out.println("2. Referrer ID");
+	        System.out.println("3. Add reason");
+	        System.out.println("4. Go back");
+	        select = scan.nextInt();
         }
-        PreparedStatement insertReferralStatus = conn.prepareStatement("insert into referral_status (facility_id, employee_id) " +
-                "values (?,?)");
-        insertReferralStatus.setInt(1, facilityID);
-        insertReferralStatus.setInt(2, referrerID);
-        insertReferralStatus.executeQuery();
-        int refStatusID = 0;
-        PreparedStatement getRefStatSeqID = conn.prepareStatement("select referral_status_id_seq.currval from dual");
-        ResultSet rs3 = getRefStatSeqID.executeQuery();
-        while (rs3.next()) {
-            refStatusID = rs3.getInt("CURRVAL");
-        }
-        for (Integer x : referralReasonCode) {
-            PreparedStatement insertRefStatusReasonMapping = conn.prepareStatement("insert into referral_reason_mapping(REFFERAL_STATUS_ID, REASON_CODE_ID) values(?, ?)");
-            insertRefStatusReasonMapping.setInt(1, refStatusID);
-            insertRefStatusReasonMapping.setInt(2, x);
-            insertRefStatusReasonMapping.executeQuery();
-        }
-        return refStatusID;
+    }
+    
+    
+    
+    int addReferralReasons(Connection conn, List<Integer> referralReasonCode,int facilityID,int referrerID) throws Exception {
+    	 String insert_rstatus = "insert into referral_status (facility_id, employee_id) " +
+                 "values ("+facilityID+" , '" +referrerID+ "')";
+         System.out.println(insert_rstatus);
+         PreparedStatement insertReferralStatus = conn.prepareStatement(insert_rstatus);
+         insertReferralStatus.executeQuery();
+         int refStatusID = 0;
+         PreparedStatement getRefStatSeqID = conn.prepareStatement("select referral_status_id_seq.currval from dual");
+         ResultSet rs3 = getRefStatSeqID.executeQuery();
+         while (rs3.next()) {
+             refStatusID = rs3.getInt("CURRVAL");
+         }
+         for (Integer x : referralReasonCode) {
+        	 x = x+1;
+        	 String refReasonMapping = "insert into refferal_reason_mapping(REFFERAL_STATUS_ID, REASON_CODE_ID) values("+refStatusID +", "+ x +")";
+        	 //System.out.println(refReasonMapping);
+             PreparedStatement insertRefStatusReasonMapping = conn.prepareStatement(refReasonMapping);
+             insertRefStatusReasonMapping.executeQuery();
+         }
+         return refStatusID;
     }
 
     List<Integer> displayReferralReason(Connection conn) throws Exception {
         Scanner scan = new Scanner(System.in);
-        List<Integer> reasonIDs = null;
+        List<Integer> reasonIDs = new ArrayList<Integer>();
         System.out.println("1. Reason");
         System.out.println("2. Go back");
         int select = scan.nextInt();
@@ -206,16 +242,19 @@ public class TreatedPatientMenu extends Staff {
         int reasonCount = 0;
         while (reasonCount < 4 && select == 1) {
             System.out.println("Following are the services available:");
-            List services = null;
-            PreparedStatement getServices = conn.prepareStatement("select sd.name from hospital_service_dept_mapping hsdm inner join service_dept sd on hsdm.service_dept_id = sd.id where facility_id not in ?");
-            getServices.setInt(1, getFacilityId(conn));
+            //List<String> services = new ArrayList<String>();
+            HashMap<Integer,String> services = new HashMap<Integer, String>();
+            PreparedStatement getServices = conn.prepareStatement("select sd.name from hospital_service_dept_mapping hsdm inner join service_dept sd on hsdm.service_dept_id = sd.id where facility_id in ?");
+            getServices.setInt(1, this.ref_facility_id);
             ResultSet rsServ = getServices.executeQuery();
+            int i = 1;
             while (rsServ.next()) {
-                services.add(rsServ.getString("NAME"));
+                services.put(i,rsServ.getString("NAME"));
+                i++;
             }
 
             System.out.println("Please choose a service to refer: " + services);
-            String service = scan.nextLine();
+            int service = scan.nextInt();
 
             System.out.println("Enter a reason code:");
             System.out.println("1. Service unavailable at time of visit");
@@ -241,19 +280,29 @@ public class TreatedPatientMenu extends Staff {
             System.out.println("Enter a decription:");
             String description = scan.nextLine();
 
-            PreparedStatement insertReason = conn.prepareStatement("insert into reason (reason_code, service_name, description) values (?,?,?)");
-            insertReason.setString(1, referralReason);
-            insertReason.setString(2, service);
-            insertReason.setString(3, description);
-            insertReason.executeQuery();
-
-            PreparedStatement getAddSeqID = conn.prepareStatement("select reason_id_seq.currval from dual");
-            ResultSet rs3 = getAddSeqID.executeQuery();
+            this.insertReason = conn.prepareStatement("insert into reason (reason_code, service_name, description) values (?,?,?)");
+            this.insertReason.setInt(1, selectRsn);
+            this.insertReason.setString(2, services.get(service));
+            this.insertReason.setString(3, description);
+            
             int reasonID = 0;
-            while (rs3.next()) {
-                reasonID = rs3.getInt("CURRVAL");
-            }
-            reasonIDs.add(reasonID);
+            try {
+	            PreparedStatement getAddSeqID = conn.prepareStatement("select reason_id_seq.currval from dual");
+	            ResultSet rs3 = getAddSeqID.executeQuery();
+	            while (rs3.next()) {
+	                reasonID = rs3.getInt("CURRVAL");
+	            }
+	            reasonIDs.add(reasonID);
+            } catch (Exception e) {
+            	PreparedStatement getnextval = conn.prepareStatement("select reason_id_seq.nextval from dual");
+                ResultSet rs4 = getnextval.executeQuery();
+                PreparedStatement getAddSeqID = conn.prepareStatement("select reason_id_seq.currval from dual");
+                ResultSet rs3 = getAddSeqID.executeQuery();
+	             while (rs3.next()) {
+	                 reasonID = rs3.getInt("CURRVAL");
+	             }
+	             reasonIDs.add(reasonID);
+			}
             System.out.println("Do you wish to enter more reasons?");
             System.out.println("1. Reason");
             System.out.println("2. Go back");
@@ -279,10 +328,11 @@ public class TreatedPatientMenu extends Staff {
             String neg_exp = neg_exp_code == 1 ? "Misdiagnosis" : "Infected_at_hospital";
             System.out.println("Please enter a text description for the chosen reason:");
             String desc = scan.nextLine();
-            PreparedStatement insertNegExp = conn.prepareStatement("INSERT INTO NEGATIVE_EXP (CODE, DESCRIPTION) VALUES (?, ?)");
-            insertNegExp.setString(1, neg_exp);
-            insertNegExp.setString(2, desc);
-            insertNegExp.executeQuery();
+            this.negExp.put(neg_exp,desc);
+            this.insertNegExp = conn.prepareStatement("INSERT INTO NEGATIVE_EXP (CODE, DESCRIPTION) VALUES (?, ?)");
+            this.insertNegExp.setString(1, neg_exp);
+            this.insertNegExp.setString(2, desc);
+            //insertNegExp.executeQuery();
             int negExpSeqID = 0;
             try {
                 PreparedStatement getAddSeqID = conn.prepareStatement("select neg_exp_id_seq.currval from dual");
@@ -291,37 +341,83 @@ public class TreatedPatientMenu extends Staff {
                     negExpSeqID = rs3.getInt("CURRVAL");
                 }
             } catch (SQLException s) {
-                negExpSeqID = 0;
+            	System.out.println("In catch -- Neg exp");
+                PreparedStatement getnext = conn.prepareStatement("select neg_exp_id_seq.nextval from dual");
+                ResultSet rs4 = getnext.executeQuery();
+                PreparedStatement getAddSeqID = conn.prepareStatement("select neg_exp_id_seq.currval from dual");
+                ResultSet rs3 = getAddSeqID.executeQuery();
+                while (rs3.next()) {
+                    negExpSeqID = rs3.getInt("CURRVAL");
+                }
             }
             return negExpSeqID;
         } else if (select == 2) {
-            return null;
+            return 0;
         } else {
             System.out.println("Please enter a valid input.");
             displayNegativeExperience(conn);
         }
-        return null;
+        return 0;
     }
 
     void displayReportConfirmation(Connection conn, Integer referralStatusID, Integer negExpCode, String dischargeStatus, String treatmentDesc) throws Exception {
         Scanner scan = new Scanner(System.in);
+        System.out.println("-----------Report--------------");
+        System.out.println("Discharge status: " + dischargeStatus);
+        if(referralStatusID == 1) {
+        	System.out.println("Facility referred to: "+this.ref_facility_id);
+        	System.out.println("Referrer emp id: " + this.ref_emp_id);
+        	System.out.println("refferal reason: " );
+        }
+        System.out.println("Treatement description: " + treatmentDesc);
+        if(negExpCode!=0) {
+        	System.out.println("Neg experience reason:" + this.negExp);
+        }
         System.out.println("1. Confirm");
         System.out.println("2. Go back");
         int select = scan.nextInt();
         scan.nextLine();
         if (select == 1) {
-            PreparedStatement insertPatientSym = conn.prepareStatement("insert into report (patient_id, referral_status_id, negative_exp_id, discharge_status, treatment_given) " +
-                    "values (?,?,?,?,?)");
-            insertPatientSym.setInt(1, this.patientSessionID);
-            insertPatientSym.setInt(2, referralStatusID);
-            insertPatientSym.setInt(3, negExpCode);
-            insertPatientSym.setString(4, dischargeStatus);
-            insertPatientSym.setString(5, treatmentDesc);
-            insertPatientSym.executeQuery();
-            System.out.println("Check-out process completed.");
+        	// reffered
+        	if(referralStatusID == 1) {
+        		this.insertReason.executeQuery();
+        		System.out.println("inserted in reason");
+        	}
+        	// has neg exp
+        	if(negExpCode!=0) {
+        		negExpCode +=1;
+        		this.insertNegExp.executeQuery();
+        		int ref_status_id = addReferralReasons(conn, this.ref_reason_codes, this.ref_facility_id, this.ref_emp_id);
+        		System.out.println("inserted in neg exp");
+        		String insertReport = "insert into report (patient_id, referral_status_id, negative_exp_id, discharge_status, treatment_given) " +
+                        "values ("+ this.patientSessionID +", "+ ref_status_id +", " +negExpCode +", '" + dischargeStatus+"', '"+treatmentDesc +"')";
+        		System.out.println(insertReport);
+        		 PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
+                 insertPatientSym.executeQuery();
+                 System.out.println("Check-out process completed.");
+        	}
+        	// reffered and no neg exp
+        	if(referralStatusID==1 && negExpCode == 0) {
+        		int ref_status_id = addReferralReasons(conn, this.ref_reason_codes, this.ref_facility_id, this.ref_emp_id);
+        		String insertReport = "insert into report (patient_id, referral_status_id, discharge_status, treatment_given) " +
+                        "values ("+ this.patientSessionID +", "+ ref_status_id +", '" + dischargeStatus+"', '"+treatmentDesc +"')";
+        		 PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
+                 insertPatientSym.executeQuery();
+                 System.out.println("Check-out process completed.");
+        	}
+        	// not reffered no exp
+        	if(referralStatusID!=1 && negExpCode == 0) {
+        		String insertReport = "insert into report (patient_id, discharge_status, treatment_given) " +
+                        "values ("+ this.patientSessionID + ", '" + dischargeStatus+"', '"+treatmentDesc +"')";
+        		System.out.println(insertReport);
+        		PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
+                insertPatientSym.executeQuery();
+                System.out.println("Check-out process completed.");
+        	}
+           
             StaffMenuDisplay(conn);
         } else if (select == 2) {
-            displayStaffPatientCheckout(conn);
+            displayStaffPatientCheckout(conn,dischargeStatus,treatmentDesc,referralStatusID,negExpCode);
         } else {
             System.out.println("Please enter a valid input.");
             displayReportConfirmation(conn, referralStatusID, negExpCode, dischargeStatus, treatmentDesc);
