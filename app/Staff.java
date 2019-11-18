@@ -98,7 +98,7 @@ public class Staff {
     	return rs.getInt(1);
     }
     public int getCheckInWithNoPriority(Connection conn,int facility_id) throws Exception {
-        String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
+        String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT.F_NAME, PATIENT.L_NAME,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
         		" AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY IS NULL";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
@@ -108,7 +108,7 @@ public class Staff {
         } else {
             System.out.println("Checked In Patient IDs");
             while (rs.next()) {
-                System.out.println(rs.getInt(1));
+                System.out.println(rs.getInt(1)+"\t"+rs.getString(3)+"\t"+rs.getString(4));
 
             }
             selectPatient(conn, copyrs);
@@ -117,7 +117,7 @@ public class Staff {
     }
 
     public int getCheckedInPatientList(Connection conn, String priority_status, int facility_id) throws Exception {
-        String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
+        String getCheckedInP = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT.F_NAME, PATIENT.L_NAME,PATIENT_SESSION.PRIORITY FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID" +
         		" AND PATIENT.FACILITY_ID = "+facility_id +
                 " AND PATIENT_SESSION.CHECKIN_START IS NOT NULL AND PATIENT_SESSION.TREATED IS NULL AND PATIENT_SESSION.PRIORITY= '" + priority_status + "'";
         ResultSet rs = executeStringQuery(conn, getCheckedInP);
@@ -127,7 +127,7 @@ public class Staff {
         } else {
             System.out.println("Checked In Patient IDs with priority = " + priority_status);
             while (rs.next()) {
-                System.out.println(rs.getInt(1));
+                System.out.println(rs.getInt(1)+"\t"+rs.getString(3)+"\t"+rs.getString(4));
 
             }
             selectPatient(conn, copyrs);
@@ -144,7 +144,7 @@ public class Staff {
         while (rs.next()) {
             System.out.println(rs.getInt(1));
             if (rs.getInt(1) == id) {
-                System.out.println("ID matched");
+                //System.out.println("ID matched");
                 patient_found = 1;
                 EnterVitalTreatPatient enterVitalTreatPatient = new EnterVitalTreatPatient();
                 enterVitalTreatPatient.EnterVitalMenu(conn, rs.getInt(2), this.id);
@@ -157,7 +157,7 @@ public class Staff {
     }
 
     public void getTreatedPatientList(Connection conn) throws Exception {
-        String getTreatedPList = "SELECT PATIENT.PID,PATIENT_SESSION.ID FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID AND PATIENT_SESSION.FACILITY_ID =" + getFacilityId(conn) 
+        String getTreatedPList = "SELECT PATIENT.PID,PATIENT_SESSION.ID,PATIENT.F_NAME,PATIENT.L_NAME FROM PATIENT INNER JOIN PATIENT_SESSION ON PATIENT.PID = PATIENT_SESSION.PID AND PATIENT_SESSION.FACILITY_ID =" + getFacilityId(conn) 
         + " AND PATIENT_SESSION.TREATED='Y' AND PATIENT_SESSION.ID NOT IN (SELECT PATIENT_ID FROM REPORT)";
         ResultSet rs = executeStringQuery(conn, getTreatedPList);
         HashMap<Integer,Integer> pid_to_sid = new HashMap<Integer, Integer>();
@@ -167,7 +167,7 @@ public class Staff {
         }else {
         	
 	        while (rs.next()) {
-	            System.out.println(rs.getInt(1));
+	            System.out.println(rs.getInt(1)+"\t"+rs.getString(3)+"\t"+rs.getString(4));
 	            pid_to_sid.put(rs.getInt(1), rs.getInt(2));
 	        }
 	        Scanner s = new Scanner(System.in);
@@ -262,7 +262,7 @@ public class Staff {
             }
         	// Display all body parts that could be associated with the symptom
         	System.out.println("Following are the the body parts associated with the symptom");
-        	String symp_bodypart = "SELECT SYMPTOM.BP_CODE FROM SYMPTOM WHERE SYMPTOM.CODE = '"+code+"'";
+        	String symp_bodypart = "SELECT SYMPTOM.BP_CODE, BODYPART.NAME FROM SYMPTOM INNER JOIN BODYPART ON SYMPTOM.BP_CODE = BODYPART.CODE WHERE SYMPTOM.CODE = '"+code+"'";
         	ResultSet sym_bp = executeStringQuery(conn, symp_bodypart);
         	sym_bp.next();
         	// if no bp associated with symptom, display all
@@ -277,7 +277,7 @@ public class Staff {
         	else {
         		System.out.println(sym_bp.getString(1));
 	        	while(sym_bp.next()) {
-	        		System.out.println(sym_bp.getString(1));
+	        		System.out.println(sym_bp.getString(1)+"\t"+sym_bp.getString(2));
 	        	}
         	}
             System.out.println("Enter the body part CODE from above or else enter none");

@@ -299,7 +299,7 @@ class Patient {
 
             if (!reason.isEmpty()) {
                 PreparedStatement getReasonDetails = conn.prepareStatement("SELECT REASON_CODE, SERVICE_NAME, DESCRIPTION FROM REASON WHERE REASON_CODE = ?");
-                getReasonDetails.setString(1, reason);
+            	getReasonDetails.setString(1, reason);
                 ResultSet rsReason = getReasonDetails.executeQuery();
                 while (rsReason.next()) {
                     reasonServiceName = rsReason.getString("SERVICE_NAME");

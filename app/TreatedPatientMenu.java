@@ -18,10 +18,11 @@ public class TreatedPatientMenu extends Staff {
     private int ref_facility_id = 0;
     private int ref_emp_id = 0;
     List<Integer> ref_reason_codes= new ArrayList<Integer>();
+    HashMap<String,ArrayList<String>> ref_reason = new HashMap<String, ArrayList<String>>();
     private PreparedStatement insertNegExp;
     private PreparedStatement insertReason;
     private HashMap<String,String> negExp = new HashMap<String, String>();
-
+    private HashMap<Integer,ArrayList<String>> ref_reasons_with_id = new HashMap<Integer, ArrayList<String>>();
 
     TreatedPatientMenu(String staffID, Integer patientSessionID) {
         super(staffID);
@@ -76,7 +77,6 @@ public class TreatedPatientMenu extends Staff {
             if (select == 2) {
                 if (dischargeStatus == null) {
                     System.out.println("Enter discharge status first\n\n");
-                    //displayStaffPatientCheckout(conn);
                 } else if (dischargeStatus.toLowerCase().equals("referred")) {
                 	int facilityID = 0;
                     int referrerID = 0;
@@ -191,9 +191,9 @@ public class TreatedPatientMenu extends Staff {
 	            scan.nextLine();
 	            //displayReferralReason(conn);
 	        } else if (select == 3) {
-	            referralReasonCode = displayReferralReason(conn);
-	            this.ref_emp_id = referrerID;
+	        	this.ref_emp_id = referrerID;
 	            this.ref_facility_id = facilityID;
+	            referralReasonCode = displayReferralReason(conn);
 	            this.ref_reason_codes = referralReasonCode;
 	            referralStatusId = 1;
 	        } else if(select == 4) {
@@ -222,12 +222,14 @@ public class TreatedPatientMenu extends Staff {
          while (rs3.next()) {
              refStatusID = rs3.getInt("CURRVAL");
          }
+         int count = 1;
          for (Integer x : referralReasonCode) {
-        	 x = x+1;
+        	 x = x+count;
         	 String refReasonMapping = "insert into refferal_reason_mapping(REFFERAL_STATUS_ID, REASON_CODE_ID) values("+refStatusID +", "+ x +")";
         	 //System.out.println(refReasonMapping);
              PreparedStatement insertRefStatusReasonMapping = conn.prepareStatement(refReasonMapping);
              insertRefStatusReasonMapping.executeQuery();
+             count += 1;
          }
          return refStatusID;
     }
@@ -279,11 +281,8 @@ public class TreatedPatientMenu extends Staff {
 
             System.out.println("Enter a decription:");
             String description = scan.nextLine();
-
-            this.insertReason = conn.prepareStatement("insert into reason (reason_code, service_name, description) values (?,?,?)");
-            this.insertReason.setInt(1, selectRsn);
-            this.insertReason.setString(2, services.get(service));
-            this.insertReason.setString(3, description);
+            this.ref_reason.put(referralReason, new ArrayList<String>(List.of(services.get(service),description)));
+            this.ref_reasons_with_id.put(selectRsn,new ArrayList<String>(List.of(services.get(service),description)));
             
             int reasonID = 0;
             try {
@@ -341,7 +340,6 @@ public class TreatedPatientMenu extends Staff {
                     negExpSeqID = rs3.getInt("CURRVAL");
                 }
             } catch (SQLException s) {
-            	System.out.println("In catch -- Neg exp");
                 PreparedStatement getnext = conn.prepareStatement("select neg_exp_id_seq.nextval from dual");
                 ResultSet rs4 = getnext.executeQuery();
                 PreparedStatement getAddSeqID = conn.prepareStatement("select neg_exp_id_seq.currval from dual");
@@ -367,7 +365,7 @@ public class TreatedPatientMenu extends Staff {
         if(referralStatusID == 1) {
         	System.out.println("Facility referred to: "+this.ref_facility_id);
         	System.out.println("Referrer emp id: " + this.ref_emp_id);
-        	System.out.println("refferal reason: " );
+        	System.out.println("referral reason: " + this.ref_reason);
         }
         System.out.println("Treatement description: " + treatmentDesc);
         if(negExpCode!=0) {
@@ -378,9 +376,13 @@ public class TreatedPatientMenu extends Staff {
         int select = scan.nextInt();
         scan.nextLine();
         if (select == 1) {
-        	// reffered
+        	// referred
         	if(referralStatusID == 1) {
-        		this.insertReason.executeQuery();
+        		for(Map.Entry entry: this.ref_reasons_with_id.entrySet()) {
+        			ArrayList<String> val = (ArrayList<String>) entry.getValue();
+        			String enter_in_reason = "insert into reason(reason_code,service_name,description) values("+entry.getKey()+", '"+val.get(0)+"', '"+val.get(1)+"')";
+        			executeStringQuery(conn, enter_in_reason);
+        		}
         		System.out.println("inserted in reason");
         	}
         	// has neg exp

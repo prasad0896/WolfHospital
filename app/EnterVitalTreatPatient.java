@@ -193,13 +193,13 @@ public class EnterVitalTreatPatient{
 		while(rs2.next()) {
 			if(rs2.getString(1)!=null) {
 			body_part_patient.add(rs2.getString(1));
-			System.out.println(rs2.getString(1));
+			//System.out.println(rs2.getString(1));
 			}
 		}
 		while(rs3.next()) {
 			if(rs3.getString(1)!=null) {
 			body_part_patient.add(rs3.getString(1));
-			System.out.println(rs3.getString(1));
+			//System.out.println(rs3.getString(1));
 			}
 		}
 		while(rs1.next()) {
