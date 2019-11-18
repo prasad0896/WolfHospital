@@ -43,7 +43,7 @@ public class Staff {
                 }
                 break;
             case 7:
-                conn.close();
+                conn.close();scan.close();
             case 2:
                 getTreatedPatientList(conn);
                 break;

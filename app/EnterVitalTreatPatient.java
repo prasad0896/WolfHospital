@@ -35,7 +35,7 @@ public class EnterVitalTreatPatient{
         case 1: EnterVitalSigns(conn,id,staff_id); break;
         case 2: TreatPatient(conn,id,staff_id); break;
         case 3: Staff s = new Staff(staff_id); s.StaffMenuDisplay(conn); break;
-        case 4: conn.close();
+        case 4: conn.close(); scan.close();
         }
 	}
 	

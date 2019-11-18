@@ -104,7 +104,7 @@ class Patient {
                     System.out.println("Enter Description:");
                     String symtom_name = scan.nextLine();
 //                    String symtom_code = symtom_name.substring(0, 3).toUpperCase();
-                    displayMetaData(symtom_name, null, symtom_name, conn);
+                    displayMetaData(null,symtom_name, symtom_name, conn);
                 } else if (select.equals("DONE")) {
                     validatePatient(conn);
                 } else {
@@ -136,13 +136,11 @@ class Patient {
             System.out.println("5. Cause (Incident)");
             int select = scan.nextInt();
             scan.nextLine();
+            // if symptom code is null => patient entered other => insert only symptom description in table
+            if(symtom_code!=null) {
             switch (select) {
                 case 1: {
-                	if(symtom_code==null) {
-                		System.out.println("Cannot enter body part as symptom does not exist");
-                	}else {
-                		bodypart_code = displayBodyparts(scan, conn, symtom_code);
-                	}
+                	bodypart_code = displayBodyparts(scan, conn, symtom_code);
                     break;
                 }
                 case 2: {
@@ -165,7 +163,8 @@ class Patient {
                     break;
                 }
             }
-        }
+         }
+     }
         if(symtom_code!=null) {
         PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, sym_code, severity, duration, reoccuring, cause, bp_code) values (?,?,?,?,?,?,?)");
         insertPatientSym.setInt(1, this.sid);
@@ -177,13 +176,9 @@ class Patient {
         insertPatientSym.setString(7, bodypart_code);
         insertPatientSym.executeQuery();
         } else if(symtom_code==null) {
-        	PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, severity, duration, reoccuring, cause, other_description) values (?,?,?,?,?,?)");
+        	PreparedStatement insertPatientSym = conn.prepareStatement("insert into patient_sym_mapping (sid, other_description) values (?,?)");
         	insertPatientSym.setInt(1, this.sid);
-        	insertPatientSym.setString(2, severity);
-        	insertPatientSym.setInt(3, duration);
-        	insertPatientSym.setInt(4, isRecurring);
-        	insertPatientSym.setString(5, cause);
-        	insertPatientSym.setString(6,description);
+        	insertPatientSym.setString(2,description);
         	insertPatientSym.executeQuery();
         }
     }
