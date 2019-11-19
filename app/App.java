@@ -35,7 +35,9 @@ public class App {
                 signIn(conn);
             case 2:
                 signUp(conn);
-            case 3:
+            case 3: DemoQueries demo = new DemoQueries();
+            		demo.menu(conn);
+            		break;
             case 4:
                 System.out.println("Connection closed");
                 conn.close();
