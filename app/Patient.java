@@ -298,14 +298,14 @@ class Patient {
             }
 
             if (!reason.isEmpty()) {
-                PreparedStatement getReasonDetails = conn.prepareStatement("SELECT REASON_CODE, SERVICE_NAME, DESCRIPTION FROM REASON WHERE REASON_CODE = ?");
-            	getReasonDetails.setString(1, reason);
+                //PreparedStatement getReasonDetails = conn.prepareStatement("SELECT REASON_CODE, SERVICE_NAME, DESCRIPTION FROM REASON WHERE REASON_CODE = ?");
+            	PreparedStatement getReasonDetails = conn.prepareStatement("SELECT REFFERAL_REASON_MAPPING.REASON_CODE_ID,REASON.SERVICE_NAME,REASON.DESCRIPTION FROM REFFERAL_REASON_MAPPING INNER JOIN REASON ON REFFERAL_REASON_MAPPING.REASON_CODE_ID = REASON.ID WHERE REFFERAL_STATUS_ID = "+ref);
                 ResultSet rsReason = getReasonDetails.executeQuery();
                 while (rsReason.next()) {
-                    reasonServiceName = rsReason.getString("SERVICE_NAME");
-                    reasonDesc = rsReason.getString("DESCRIPTION");
+                    reasonServiceName = rsReason.getString(2);
+                    reasonDesc = rsReason.getString(3);
+                    //System.out.println(reasonServiceName+"\t" + reasonDesc);
                 }
-               System.out.println(reasonServiceName+reasonDesc);
             }
 
             System.out.println("The report details filled by the staff:");
@@ -317,7 +317,8 @@ class Patient {
             if (!reason.isEmpty()) {
                 System.out.println("Referral Reason Service Name: " + reasonServiceName + " " + reasonDesc);
             }
-            if (negExp != null) {
+            if (negExp != 0) {
+//            	System.out.println(negExp);
                 System.out.println("Negative Experience: " + negCode + " " + negDesc);
             }
 

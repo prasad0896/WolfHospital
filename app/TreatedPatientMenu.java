@@ -385,15 +385,14 @@ public class TreatedPatientMenu extends Staff {
         		}
         		System.out.println("inserted in reason");
         	}
-        	// has neg exp
-        	if(negExpCode!=0) {
+        	// reffered and neg exp
+        	if(negExpCode!=0 && referralStatusID == 1) {
         		negExpCode +=1;
         		this.insertNegExp.executeQuery();
         		int ref_status_id = addReferralReasons(conn, this.ref_reason_codes, this.ref_facility_id, this.ref_emp_id);
-        		System.out.println("inserted in neg exp");
         		String insertReport = "insert into report (patient_id, referral_status_id, negative_exp_id, discharge_status, treatment_given) " +
                         "values ("+ this.patientSessionID +", "+ ref_status_id +", " +negExpCode +", '" + dischargeStatus+"', '"+treatmentDesc +"')";
-        		System.out.println(insertReport);
+        		//System.out.println(insertReport);
         		 PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
                  insertPatientSym.executeQuery();
                  System.out.println("Check-out process completed.");
@@ -407,11 +406,22 @@ public class TreatedPatientMenu extends Staff {
                  insertPatientSym.executeQuery();
                  System.out.println("Check-out process completed.");
         	}
-        	// not reffered no exp
+        	// not reffered no neg exp
         	if(referralStatusID!=1 && negExpCode == 0) {
         		String insertReport = "insert into report (patient_id, discharge_status, treatment_given) " +
                         "values ("+ this.patientSessionID + ", '" + dischargeStatus+"', '"+treatmentDesc +"')";
-        		System.out.println(insertReport);
+        		//System.out.println(insertReport);
+        		PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
+                insertPatientSym.executeQuery();
+                System.out.println("Check-out process completed.");
+        	}
+        	// not refferef neg exp
+        	if(referralStatusID!=1 && negExpCode!=0) {
+        		negExpCode +=1;
+        		this.insertNegExp.executeQuery();
+        		String insertReport = "insert into report (patient_id, discharge_status, negative_exp_id, treatment_given) " +
+                        "values ("+ this.patientSessionID + ", '" + dischargeStatus+"', "+negExpCode+", '"+treatmentDesc +"')";
+        		//System.out.println(insertReport);
         		PreparedStatement insertPatientSym = conn.prepareStatement(insertReport);
                 insertPatientSym.executeQuery();
                 System.out.println("Check-out process completed.");

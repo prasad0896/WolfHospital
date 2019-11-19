@@ -26,9 +26,66 @@ public class DemoQueries {
 			case 1: execOne(conn); break;
 			case 2: execTwo(conn); break;
 			case 3: execThree(conn); break;
+			case 4: execFour(conn); break;
+			case 5: execFive(conn); break;
+			case 6: execSix(conn); break;
 		}
 	}
 	
+	public void execOne(Connection conn) throws Exception {
+		String query1 = "select patient.F_NAME, patient.L_NAME, patient.FACILITY_ID, patient_session.checkin_end,patient_session.checkout_date, negative_exp.description from patient inner join PATIENT_SESSION on patient.pid=patient_session.pid inner join report on PATIENT_SESSION.id=REPORT.patient_id inner join negative_exp on report.negative_exp_id=negative_exp.n_id";
+		ResultSet rs = executeStringQuery(conn, query1);
+		printResult(rs);
+	}
+	
+	public void execTwo(Connection conn) throws Exception {
+		Scanner s = new Scanner(System.in);
+		System.out.println("Enter start date (DD-mmm-YY");
+		String start_date = s.nextLine();
+		System.out.println("Enter end date (DD-mmm-YY");
+		String end_date = s.nextLine();
+		String query2 = "select unique(patient_session.facility_id) from patient_session inner join report on report.patient_id = patient_session.id where report.negative_exp_id is NULL and patient_session.treatment_time between '"+ start_date+"' and '" +end_date+"'" ;
+		ResultSet rs = executeStringQuery(conn, query2);
+		printResult(rs);
+	}
+	
+	public void execThree(Connection conn) throws Exception {
+		String query3 = "select count(referral_status.facility_id), staff.facility_id from referral_status inner join staff on referral_status.employee_id=staff.employee_id GROUP BY staff.facility_id";
+		ResultSet rs = executeStringQuery(conn, query3);
+		printResult(rs);
+	}
+	
+	private void execSix(Connection conn) throws Exception {
+		String query6 = "select * from patient where pid in (select pid from (" + 
+				"select patient_session.pid, (checkin_end - checkin_start) diff from patient_session" + 
+				"where checkin_start is not null and checkin_end is not null and treated = 'Y' and rownum <= 5 order by diff desc" + 
+				"))";
+		ResultSet rs = executeStringQuery(conn, query6);
+		printResult(rs);
+		
+	}
+
+	private void execFive(Connection conn) throws Exception {
+		String query5 = "select * from hospital where facility_id in ( select facility_id from (" + 
+				"select ps.facility_id, count(ps.facility_id) as c from patient_session ps inner join report on report.patient_id = ps.id" + 
+				"where report.negative_exp_id is not null group by ps.facility_id order by c desc))";
+		ResultSet rs = executeStringQuery(conn, query5);
+		printResult(rs);
+	}
+
+	private void execFour(Connection conn) throws Exception {
+		String query4 = "select * from hospital where facility_id not in (" + 
+				"select ps.facility_id from patient_session ps inner join report on report.patient_id = ps.id where ps.id in (" + 
+				"select ps.id from patient_session ps inner join patient_sym_mapping psm on psm.sid = ps.id where bp_code in ( " + 
+				"select code from bodypart where name ='Chest')) and report.negative_exp_id is not null)" + 
+				"and facility_id in (select ps.facility_id from patient_session ps inner join report on report.patient_id = ps.id where ps.id in (" + 
+				"select ps.id from patient_session ps inner join patient_sym_mapping psm on psm.sid = ps.id where bp_code in ( " + 
+				"select code from bodypart where name ='Heart')))";
+		ResultSet rs = executeStringQuery(conn, query4);
+		printResult(rs);
+		
+	}
+
 	public ResultSet executeStringQuery(Connection conn, String query) throws Exception {
 		//System.out.println("executing");
 		PreparedStatement stmt = conn.prepareStatement(query);
@@ -46,28 +103,5 @@ public class DemoQueries {
 			System.out.println();
 		}
 	}
-	
-	
-	public void execOne(Connection conn) throws Exception {
-		String query1 = "select patient.F_NAME, patient.L_NAME, patient.FACILITY_ID, patient_session.checkin_end,patient_session.checkout_date, negative_exp.description"+
-						" from patient inner join PATIENT_SESSION on patient.pid=patient_session.pid inner join report on PATIENT_SESSION.id=REPORT.patient_id inner join negative_exp"+
-						" on report.negative_exp_id=negative_exp.n_id";
-		ResultSet rs = executeStringQuery(conn, query1);
-		printResult(rs);
-	}
-	
-	public void execTwo(Connection conn) throws Exception {
-		Scanner s = new Scanner(System.in);
-		System.out.println("Enter start date (DD-mmm-YY");
-		String start_date = s.nextLine();
-		System.out.println("Enter end date (DD-mmm-YY");
-		String end_date = s.nextLine();
-		String query2 = "select patient_session.facility_id from patient_session inner join report on report.patient_id = patient_session.sid where report.negative_exp_id=0 and patient_session.treatment_time between <date range>" ;
-		ResultSet rs = executeStringQuery(conn, query2);
-		printResult(rs);
-	}
-	
-	public void execThree(Connection conn) {
-		String query3 = "select count(referral_status.facility_id), staff.facility_id from referral_status inner join staff on referral_status.employee_id=staff.employee_id GROUP BY staff.facility_id";
-	}
+
 }
