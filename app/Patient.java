@@ -104,9 +104,11 @@ class Patient {
                     System.out.println("Enter Description:");
                     String symtom_name = scan.nextLine();
 //                    String symtom_code = symtom_name.substring(0, 3).toUpperCase();
-                    displayMetaData(null,symtom_name, symtom_name, conn);
+                    displayMetaData(null, symtom_name, symtom_name, conn);
+                    break;
                 } else if (select.equals("DONE")) {
                     validatePatient(conn);
+                    break;
                 } else {
                     displayMetaData(select, symptoms.get(select).get(0).toString(), null, conn);
                 }
@@ -219,13 +221,16 @@ class Patient {
     }
 
     private void validatePatient(Connection conn) throws Exception {
-        PreparedStatement validateSym = conn.prepareStatement("select id from patient_session where checked_out is null and (select count(*) from patient_sym_mapping where pid = ? and facility_id = ?)>0");
+        PreparedStatement validateSym = conn.prepareStatement("select id from patient_session where checkin_end is null and (select count(*) from patient_sym_mapping where sid = ?)>0");
         validateSym.setInt(1, this.id);
-        validateSym.setInt(2, this.facilityID);
         ResultSet rsValPat = validateSym.executeQuery();
-        if (!rsValPat.next()) {
-            System.out.println("Please enter your symptoms:");
+        if (!rsValPat.isBeforeFirst()) {
+            System.out.println("No symptoms entered. Please follow the check-in process.");
+            System.out.println();
             displayCheckIn(conn);
+        } else {
+            System.out.println("Check-in process completed.");
+            displayMenu(conn);
         }
     }
 
