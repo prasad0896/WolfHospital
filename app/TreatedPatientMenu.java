@@ -72,7 +72,7 @@ public class TreatedPatientMenu extends Staff {
             scan.nextLine();
             if (select == 1) {
                 dischargeStatus = displayDischargeStatus(conn,treatmentDesc,referralStatusID, negExpCode);
-                System.out.println(dischargeStatus);
+                //System.out.println(dischargeStatus);
             }
             if (select == 2) {
                 if (dischargeStatus == null) {
@@ -191,12 +191,37 @@ public class TreatedPatientMenu extends Staff {
 	            scan.nextLine();
 	            //displayReferralReason(conn);
 	        } else if (select == 3) {
-	        	this.ref_emp_id = referrerID;
+	            if(facilityID == 0 && referrerID!=0) {
+	            	System.out.println("Enter facility id");
+	            	facilityID = scan.nextInt();
+	            	scan.nextLine();
+	            }else if(facilityID !=0 && referrerID==0) {
+	            	System.out.println("Enter refferer id");
+	            	referrerID = scan.nextInt();
+	            	scan.nextLine();
+	            } else if(facilityID == 0 && referrerID == 0) {
+	            	System.out.println("Enter facility id");
+	            	facilityID = scan.nextInt();
+	            	scan.nextLine();
+	            	System.out.println("Enter refferer id");
+	            	referrerID = scan.nextInt();
+	            	scan.nextLine();
+	            }
+	            this.ref_emp_id = referrerID;
 	            this.ref_facility_id = facilityID;
 	            referralReasonCode = displayReferralReason(conn);
+	            if(referralReasonCode.isEmpty()) {
+	            	referralReasonCode = displayReferralReason(conn);
+	            }
 	            this.ref_reason_codes = referralReasonCode;
 	            referralStatusId = 1;
 	        } else if(select == 4) {
+	        	if((facilityID == 0 && referrerID == 0 && referralReasonCode.isEmpty()) || (facilityID != 0 && referrerID != 0 && !referralReasonCode.isEmpty())) {
+	        		;
+	        	}
+	        	else {
+	        		System.out.println("All fields are mandatory. Please go back and try again");
+	        	}
 	        	displayStaffPatientCheckout(conn,dischargeStatus,treatmentDesc,referralStatusId, negExpCode);
 	        	break;
 	        }
@@ -213,7 +238,7 @@ public class TreatedPatientMenu extends Staff {
     int addReferralReasons(Connection conn, List<Integer> referralReasonCode,int facilityID,int referrerID) throws Exception {
     	 String insert_rstatus = "insert into referral_status (facility_id, employee_id) " +
                  "values ("+facilityID+" , '" +referrerID+ "')";
-         System.out.println(insert_rstatus);
+         //System.out.println(insert_rstatus);
          PreparedStatement insertReferralStatus = conn.prepareStatement(insert_rstatus);
          insertReferralStatus.executeQuery();
          int refStatusID = 0;
@@ -383,7 +408,7 @@ public class TreatedPatientMenu extends Staff {
         			String enter_in_reason = "insert into reason(reason_code,service_name,description) values("+entry.getKey()+", '"+val.get(0)+"', '"+val.get(1)+"')";
         			executeStringQuery(conn, enter_in_reason);
         		}
-        		System.out.println("inserted in reason");
+        		//System.out.println("inserted in reason");
         	}
         	// reffered and neg exp
         	if(negExpCode!=0 && referralStatusID == 1) {
@@ -398,7 +423,7 @@ public class TreatedPatientMenu extends Staff {
                  System.out.println("Check-out process completed.");
         	}
         	// reffered and no neg exp
-        	if(referralStatusID==1 && negExpCode == 0) {
+        	else if(referralStatusID==1 && negExpCode == 0) {
         		int ref_status_id = addReferralReasons(conn, this.ref_reason_codes, this.ref_facility_id, this.ref_emp_id);
         		String insertReport = "insert into report (patient_id, referral_status_id, discharge_status, treatment_given) " +
                         "values ("+ this.patientSessionID +", "+ ref_status_id +", '" + dischargeStatus+"', '"+treatmentDesc +"')";
@@ -407,7 +432,7 @@ public class TreatedPatientMenu extends Staff {
                  System.out.println("Check-out process completed.");
         	}
         	// not reffered no neg exp
-        	if(referralStatusID!=1 && negExpCode == 0) {
+        	else if(referralStatusID!=1 && negExpCode == 0) {
         		String insertReport = "insert into report (patient_id, discharge_status, treatment_given) " +
                         "values ("+ this.patientSessionID + ", '" + dischargeStatus+"', '"+treatmentDesc +"')";
         		//System.out.println(insertReport);
@@ -416,7 +441,7 @@ public class TreatedPatientMenu extends Staff {
                 System.out.println("Check-out process completed.");
         	}
         	// not refferef neg exp
-        	if(referralStatusID!=1 && negExpCode!=0) {
+        	else if(referralStatusID!=1 && negExpCode!=0) {
         		negExpCode +=1;
         		this.insertNegExp.executeQuery();
         		String insertReport = "insert into report (patient_id, discharge_status, negative_exp_id, treatment_given) " +

@@ -9,6 +9,9 @@ import java.util.Scanner;
 
 public class DemoQueries {
 	public void menu(Connection conn) throws Exception {
+		Scanner s = new Scanner(System.in);
+		int choice;
+		do {
 		System.out.println("---------------------DEMO QUERIES----------------------");
 		System.out.println("1.Find all patients that were discharged but had negative experiences at any facility, list their names," + 
 				"facility, check-in date, discharge date and negative experiences");
@@ -19,9 +22,10 @@ public class DemoQueries {
 		System.out.println("6. Find each facility, list the patient encounters with the top five longest check-in phases (i.e. time from\n" + 
 				"begin check-in to when treatment phase begins (list the name of patient, date, facility, duration and\n" + 
 				"list of symptoms).");
+		System.out.println("7. Go Back");
 		System.out.println("\n\n Enter your choice.");
-		Scanner s = new Scanner(System.in);
-		int choice = s.nextInt();
+		
+		choice = s.nextInt();
 		switch(choice) {
 			case 1: execOne(conn); break;
 			case 2: execTwo(conn); break;
@@ -29,7 +33,9 @@ public class DemoQueries {
 			case 4: execFour(conn); break;
 			case 5: execFive(conn); break;
 			case 6: execSix(conn); break;
+			case 7: App.loginDisplay(conn); break;
 		}
+		}while(choice<=7 && choice>=1);
 	}
 	
 	public void execOne(Connection conn) throws Exception {
@@ -44,21 +50,50 @@ public class DemoQueries {
 		String start_date = s.nextLine();
 		System.out.println("Enter end date (DD-mmm-YY");
 		String end_date = s.nextLine();
-		String query2 = "select unique(patient_session.facility_id) from patient_session inner join report on report.patient_id = patient_session.id where report.negative_exp_id is NULL and patient_session.treatment_time between '"+ start_date+"' and '" +end_date+"'" ;
+		String query2 = "select unique(patient_session.facility_id) as facility_id from patient_session inner join("+
+				"select count(report.negative_exp_id) c,patient_session.facility_id"+
+				" from patient_session inner join report on report.patient_id = patient_session.id"+
+				" where patient_session.treatment_time between '"+start_date +"' and '"+ end_date + "'"+
+				" group by patient_session.facility_id"+
+				" )x on patient_session.facility_id =x.facility_id where x.c=0";
 		ResultSet rs = executeStringQuery(conn, query2);
 		printResult(rs);
 	}
 	
 	public void execThree(Connection conn) throws Exception {
-		String query3 = "select count(referral_status.facility_id), staff.facility_id from referral_status inner join staff on referral_status.employee_id=staff.employee_id GROUP BY staff.facility_id";
+		String query3 = "select facility_id,referred_facility from(\n" + 
+				"select y.* from (select max(count) as maxval, facility_id from\n" + 
+				"                (\n" + 
+				"                    select COUNT(referred_facility) as count, a.facility_id, referred_facility from\n" + 
+				"              (\n" + 
+				"                        select facility_id from hospital \n" + 
+				"                    ) a\n" + 
+				"                  left outer join\n" + 
+				"                    ( \n" + 
+				"                      select r.facility_id as referred_facility, s.facility_id as facility_id from referral_status r inner join staff s on r.employee_id = s.employee_id \n" + 
+				"                    ) b \n" + 
+				"                  on a.facility_id = b.facility_id GROUP BY (a.facility_id, referred_facility) ORDER BY (COUNT(referred_facility)) DESC \n" + 
+				"                ) group by facility_id \n" + 
+				"        ) x\n" + 
+				"                inner join \n" + 
+				"(select COUNT(referred_facility) as count, a.facility_id, referred_facility from\n" + 
+				"                    ( \n" + 
+				"                        select facility_id from hospital\n" + 
+				"                    ) a \n" + 
+				"                  left outer join\n" + 
+				"                    ( \n" + 
+				"                      select r.facility_id as referred_facility, s.facility_id as facility_id from referral_status r inner join staff s on r.employee_id = s.employee_id \n" + 
+				"                    ) b \n" + 
+				"                  on a.facility_id = b.facility_id GROUP BY (a.facility_id, referred_facility) ORDER BY (COUNT(referred_facility))\n" + 
+				") y on x.facility_id = y.facility_id and x.maxval = y.count)";
 		ResultSet rs = executeStringQuery(conn, query3);
 		printResult(rs);
 	}
 	
 	private void execSix(Connection conn) throws Exception {
 		String query6 = "select * from patient where pid in (select pid from (" + 
-				"select patient_session.pid, (checkin_end - checkin_start) diff from patient_session" + 
-				"where checkin_start is not null and checkin_end is not null and treated = 'Y' and rownum <= 5 order by diff desc" + 
+				"select patient_session.pid, (checkin_end - checkin_start) diff from patient_session " + 
+				"where checkin_start is not null and checkin_end is not null and treated = 'Y' and rownum <= 5 order by diff desc " + 
 				"))";
 		ResultSet rs = executeStringQuery(conn, query6);
 		printResult(rs);
@@ -66,9 +101,9 @@ public class DemoQueries {
 	}
 
 	private void execFive(Connection conn) throws Exception {
-		String query5 = "select * from hospital where facility_id in ( select facility_id from (" + 
-				"select ps.facility_id, count(ps.facility_id) as c from patient_session ps inner join report on report.patient_id = ps.id" + 
-				"where report.negative_exp_id is not null group by ps.facility_id order by c desc))";
+		String query5 = "select * from hospital where facility_id in (select facility_id from (" + 
+				" select ps.facility_id, count(ps.facility_id) as c from patient_session ps inner join report on report.patient_id = ps.id " + 
+				"where report.negative_exp_id is not null group by ps.facility_id order by c desc) where rownum=1)";
 		ResultSet rs = executeStringQuery(conn, query5);
 		printResult(rs);
 	}
@@ -97,7 +132,7 @@ public class DemoQueries {
 		ResultSetMetaData metadata = rs.getMetaData();
 		int colCount= metadata.getColumnCount();
 		while(rs.next()) {
-			for(int i=0;i<colCount;i++) {
+			for(int i=1;i<=colCount;i++) {
 				  System.out.print(rs.getString(i) + " "); 
 			}
 			System.out.println();
